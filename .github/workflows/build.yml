@@ -59,7 +59,7 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <string name="app_name">Voice</string>
-              <string name="accessibility_desc">Enables Volume Down double-click trigger, dynamic pill window, and autonomous device controls.</string>
+              <string name="accessibility_desc">Enables Volume Down double-click trigger, Nightshade floating dock, and autonomous device controls.</string>
           </resources>
           EOF
 
@@ -116,8 +116,8 @@ jobs:
                   applicationId "com.gemini.live"
                   minSdk 24
                   targetSdk 34
-                  versionCode 16
-                  versionName "2.3"
+                  versionCode 17
+                  versionName "2.4"
               }
               buildTypes {
                   release {
@@ -195,7 +195,7 @@ jobs:
           </manifest>
           EOF
 
-          # ScreenCaptureService.java: 1:1 Crisp Capture + Clean Lifecycle Shutdown
+          # ScreenCaptureService.java: 1:1 Crisp 288x592 Capture + Instant VirtualDisplay Release
           cat << 'EOF' > app/src/main/java/com/gemini/live/ScreenCaptureService.java
           package com.gemini.live;
 
@@ -354,7 +354,7 @@ jobs:
           }
           EOF
 
-          # VolumeTriggerService.java: Zero Self-Reading Filter, Candidate Grounding, Auto-Feedback Loop & Samsung Long-Press
+          # VolumeTriggerService.java: Candidate Grounding, Auto-Feedback Loop, Samsung Text Replace & Long-Press
           cat << 'EOF' > app/src/main/java/com/gemini/live/VolumeTriggerService.java
           package com.gemini.live;
 
@@ -687,7 +687,7 @@ jobs:
                           CharSequence text = node.getText();
                           CharSequence desc = node.getContentDescription();
                           String label = text != null ? text.toString().trim() : (desc != null ? desc.toString().trim() : "");
-                          if (label.isEmpty()) label = node.getViewIdResourceName() != null ? node.getViewIdResourceName() : "Target";
+                          if (label.isEmpty()) label = node.getViewIdResourceName() != null ? node.getViewIdResourceName() : "Button";
 
                           list.add("[#" + id + "] [" + type + "] \"" + label + "\" at coordinates (" + normX + ", " + normY + ")");
                       }
@@ -883,7 +883,7 @@ jobs:
           }
           EOF
 
-          # MainActivity.java: Dynamic 75dp Pill Dock, Window Sizing, My Files Integration & Device Bridge
+          # MainActivity.java: Dynamic 70dp Pill Dock, Window Sizing, My Files Integration & Device Bridge
           cat << 'EOF' > app/src/main/java/com/gemini/live/MainActivity.java
           package com.gemini.live;
 
@@ -950,7 +950,7 @@ jobs:
 
                   getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
-                  // Start by default as a compact bottom pill dock (75dp)
+                  // Start by default as a clean 70dp bottom dock
                   shrinkWindow();
 
                   String[] perms = {
@@ -1337,12 +1337,11 @@ jobs:
                   webView.loadUrl("file:///android_asset/index.html");
               }
 
-              // Shrinks the window down to only 75dp at the bottom so upper 85% is untouched
               public void shrinkWindow() {
                   runOnUiThread(() -> {
                       try {
                           DisplayMetrics dm = getResources().getDisplayMetrics();
-                          int heightPx = Math.round(75 * dm.density);
+                          int heightPx = Math.round(72 * dm.density);
                           Window window = getWindow();
                           window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, heightPx);
                           WindowManager.LayoutParams params = window.getAttributes();
@@ -1352,7 +1351,6 @@ jobs:
                   });
               }
 
-              // Expands window to fullscreen when editing settings or opening modals
               public void expandWindow() {
                   runOnUiThread(() -> {
                       try {
@@ -1402,10 +1400,6 @@ jobs:
               @Override
               protected void onDestroy() {
                   instance = null;
-                  if (isFinishing() && webView != null) {
-                      webView.destroy();
-                      webView = null;
-                  }
                   super.onDestroy();
               }
 
@@ -1452,8 +1446,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v2.3 --yes || true
-          git tag -d v2.3 || true
-          gh release create v2.3 app/build/outputs/apk/debug/app-debug.apk \
-            --title "Voice v2.3 (Dynamic Pill Dock, Zero Self-Reading & Anti-Zombie Session)" \
-            --notes "Voice v2.3: 75dp Dynamic Bottom Dock Window, Zero Self-Reading Screen Filter, Anti-Zombie Session Exclude-Recents, and Auto-Stop Screen Capture." || true
+          gh release delete v2.4 --yes || true
+          git tag -d v2.4 || true
+          gh release create v2.4 app/build/outputs/apk/debug/app-debug.apk \
+            --title "Voice v2.4 (Nightshade Architecture)" \
+            --notes "Voice v2.4: Minimalist Nightshade Dock (70dp), Anti-Ghosting Single Task, Zero Self-Reading Screen Filter, Candidate ID Automation & Clean Lifecycle." || true
