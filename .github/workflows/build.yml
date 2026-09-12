@@ -59,7 +59,7 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <string name="app_name">Voice</string>
-              <string name="accessibility_desc">Enables Volume Down double-click trigger, Nightshade floating dock, and autonomous device controls.</string>
+              <string name="accessibility_desc">Enables Volume Down double-click trigger, camera auto-expansion, and autonomous device controls.</string>
           </resources>
           EOF
 
@@ -116,8 +116,8 @@ jobs:
                   applicationId "com.gemini.live"
                   minSdk 24
                   targetSdk 34
-                  versionCode 17
-                  versionName "2.4"
+                  versionCode 18
+                  versionName "2.5"
               }
               buildTypes {
                   release {
@@ -195,7 +195,7 @@ jobs:
           </manifest>
           EOF
 
-          # ScreenCaptureService.java: 1:1 Crisp 288x592 Capture + Instant VirtualDisplay Release
+          # ScreenCaptureService.java: 1:1 Crisp Capture + Instant VirtualDisplay Release
           cat << 'EOF' > app/src/main/java/com/gemini/live/ScreenCaptureService.java
           package com.gemini.live;
 
@@ -883,7 +883,7 @@ jobs:
           }
           EOF
 
-          # MainActivity.java: Dynamic 70dp Pill Dock, Window Sizing, My Files Integration & Device Bridge
+          # MainActivity.java: Dynamic 72dp Dock, Camera 185dp Expansion, Zero Token Leaks & Bridge
           cat << 'EOF' > app/src/main/java/com/gemini/live/MainActivity.java
           package com.gemini.live;
 
@@ -950,7 +950,7 @@ jobs:
 
                   getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
-                  // Start by default as a clean 70dp bottom dock
+                  // Start by default as a clean 72dp bottom dock
                   shrinkWindow();
 
                   String[] perms = {
@@ -996,6 +996,9 @@ jobs:
 
                       @JavascriptInterface
                       public void shrinkWindow() { MainActivity.this.shrinkWindow(); }
+
+                      @JavascriptInterface
+                      public void expandForCamera(boolean enable) { MainActivity.this.expandForCamera(enable); }
 
                       @JavascriptInterface
                       public void stopScreenCapture() {
@@ -1308,20 +1311,20 @@ jobs:
 
                       @JavascriptInterface
                       public String readScreenText() {
-                          if (VolumeTriggerService.instance == null) return "Accessibility Service required to read screen.";
+                          if (VolumeTriggerService.instance == null) return "Accessibility Service required.";
                           return VolumeTriggerService.instance.readScreenText();
                       }
 
                       @JavascriptInterface
                       public String tapElement(String label) {
-                          if (VolumeTriggerService.instance == null) return "Accessibility Service required to tap elements.";
+                          if (VolumeTriggerService.instance == null) return "Accessibility Service required.";
                           boolean ok = VolumeTriggerService.instance.tapElement(label);
                           return ok ? "Tapped " + label : "Could not find element: " + label;
                       }
 
                       @JavascriptInterface
                       public String typeText(String text) {
-                          if (VolumeTriggerService.instance == null) return "Accessibility Service required to type text.";
+                          if (VolumeTriggerService.instance == null) return "Accessibility Service required.";
                           boolean ok = VolumeTriggerService.instance.typeText(text);
                           return ok ? "Typed: " + text : "Could not find an active editable field to type in.";
                       }
@@ -1342,6 +1345,20 @@ jobs:
                       try {
                           DisplayMetrics dm = getResources().getDisplayMetrics();
                           int heightPx = Math.round(72 * dm.density);
+                          Window window = getWindow();
+                          window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, heightPx);
+                          WindowManager.LayoutParams params = window.getAttributes();
+                          params.gravity = Gravity.BOTTOM;
+                          window.setAttributes(params);
+                      } catch (Exception ignored) {}
+                  });
+              }
+
+              public void expandForCamera(boolean enable) {
+                  runOnUiThread(() -> {
+                      try {
+                          DisplayMetrics dm = getResources().getDisplayMetrics();
+                          int heightPx = enable ? Math.round(185 * dm.density) : Math.round(72 * dm.density);
                           Window window = getWindow();
                           window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, heightPx);
                           WindowManager.LayoutParams params = window.getAttributes();
@@ -1397,9 +1414,21 @@ jobs:
                   if (webView != null) webView.resumeTimers();
               }
 
+              // HARD KILL: Destroys webview & drops all network sockets when finishing
               @Override
               protected void onDestroy() {
                   instance = null;
+                  if (isFinishing()) {
+                      if (webView != null) {
+                          webView.loadUrl("about:blank");
+                          webView.stopLoading();
+                          webView.destroy();
+                          webView = null;
+                      }
+                      try {
+                          stopService(new Intent(this, ScreenCaptureService.class));
+                      } catch (Exception ignored) {}
+                  }
                   super.onDestroy();
               }
 
@@ -1419,6 +1448,7 @@ jobs:
                   }
               }
 
+              // PHONE BACK BUTTON: Navigates back in other apps or minimizes, DOES NOT kill Voice session
               @Override
               public boolean onKeyDown(int keyCode, KeyEvent event) {
                   if (keyCode == KeyEvent.KEYCODE_BACK) {
@@ -1446,8 +1476,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v2.4 --yes || true
-          git tag -d v2.4 || true
-          gh release create v2.4 app/build/outputs/apk/debug/app-debug.apk \
-            --title "Voice v2.4 (Nightshade Architecture)" \
-            --notes "Voice v2.4: Minimalist Nightshade Dock (70dp), Anti-Ghosting Single Task, Zero Self-Reading Screen Filter, Candidate ID Automation & Clean Lifecycle." || true
+          gh release delete v2.5 --yes || true
+          git tag -d v2.5 || true
+          gh release create v2.5 app/build/outputs/apk/debug/app-debug.apk \
+            --title "Voice v2.5 (Hard-Kill Token Safety & Dynamic Viewport)" \
+            --notes "Voice v2.5: Dynamic Camera Window Expansion (185dp), Hard-Kill Zombie Prevention, Isolated Phone Back Navigation, 0.0px Candidate Grounding & Silent Live Web Search." || true
