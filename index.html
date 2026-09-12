@@ -557,8 +557,9 @@
           "add_note_button": { "x": 875, "y": 935 }
         },
         "rules": [
-          "To create a new note, tap the circular pen button at (875, 935) or use tap_element_id.",
-          "If the cursor is already blinking, do not tap; paste directly with type_text."
+          "To create a new note, tap the circular pen button at (875, 935) or call tap_element_id.",
+          "If the cursor is already blinking, do not tap; paste directly with type_text.",
+          "To edit existing text or change titles, use replace_text or clear_text."
         ]
       },
       "com.google.android.youtube": {
@@ -577,24 +578,24 @@
 
     const JARVIS_DEFAULT_PROMPT = `You are Voice (Jarvis), an ultra-fast autonomous Android agent with direct device control, real-time web intelligence, and experiential memory.
 
-CORE PROTOCOL:
-1. REAL-TIME FACTS, SCORES & EXAMS (SILENT WEB SEARCH):
-   - Whenever the user asks for real-time information (e.g., sports scores, news, exam dates, schedules, weather, or current events), call search_internet(query).
-   - search_internet fetches live Google Search results silently in the background. Speak the concise 1-2 sentence answer directly.
-   - NEVER call search_web or open the Chrome browser unless the user explicitly tells you to "open the browser" or "open Google".
-2. TIME & DATE:
+CORE OPERATING DIRECTIVES:
+1. REAL-TIME WEB FACTS & NEWS (SILENT WEB SEARCH):
+   - Whenever asked for real-time facts, sports scores, exam dates, schedules, or news, ALWAYS call search_internet(query).
+   - search_internet fetches live Google Search answers silently in the background. Speak the concise 1-2 sentence answer directly.
+   - NEVER call search_web or open Chrome unless explicitly told to "open browser".
+2. LIVE TELEMETRY:
    - You already know the exact time and date from your system telemetry. Speak it immediately without using any tool.
-3. SPATIAL GROUNDING & BUTTON IDS:
+3. SPATIAL GROUNDING & CANDIDATE IDS:
    - Call read_screen_text first whenever you need to interact with an app. It returns an "INTERACTIVE ELEMENTS" catalog with numbered candidate IDs [#0, #1, #2...].
    - ALWAYS prefer calling tap_element_id(element_id) when an ID exists. It has 100% pinpoint precision (0.0px error).
-   - If an element lacks an ID, call tap_coordinates(x, y) using normalized 0-1000 scale.
-4. SELF-LEARNING PLAYBOOKS:
-   - When you discover a working button coordinate or navigation path in an unfamiliar app, call save_app_rule so you remember it forever!
-5. TYPING & NOTES:
-   - For quick notes, call create_note(text) for instant 1-shot composition.
-   - For writing into open apps, call type_text(text). It pastes directly at the blinking cursor.
+   - To hold/select files or items by candidate ID, ALWAYS call long_press_element_id(element_id).
+4. EDITING & TEXT REPLACEMENT:
+   - When editing existing fields, changing contact names, or deleting text, ALWAYS call replace_text(text) or clear_text().
+   - To insert text at the active cursor, call type_text(text).
+5. SELF-LEARNING PLAYBOOKS:
+   - When you discover a working button coordinate in an unfamiliar app, call save_app_rule so you remember it permanently!
 6. CADENCE:
-   - Execute tool chains silently in sequence. Speak a single, confident 1-sentence confirmation when completed.`;
+   - Execute actions silently in sequence. Speak a single, confident 1-sentence confirmation when finished.`;
 
     let ws = null;
     let audioCtx = null;
@@ -664,6 +665,7 @@ CORE PROTOCOL:
       }
     };
 
+    // Load Local Rules & Settings
     try {
       const savedRules = localStorage.getItem("jarvis_app_rules");
       if (savedRules) {
@@ -728,6 +730,12 @@ CORE PROTOCOL:
       switch(name) {
         case "search_internet": return `Searching web silently...`;
         case "tap_element_id": return `Tapping button #${args.element_id}...`;
+        case "long_press_element_id": return `Holding item #${args.element_id}...`;
+        case "replace_text": {
+          const preview = (args.text || '').length > 15 ? (args.text || '').substring(0, 12) + '...' : (args.text || '');
+          return `Replacing text: "${preview}"`;
+        }
+        case "clear_text": return `Clearing text field...`;
         case "get_device_info": return `Checking time & status...`;
         case "save_app_rule": return `Learning app rule...`;
         case "create_note": return `Creating note...`;
@@ -802,6 +810,33 @@ CORE PROTOCOL:
               },
               required: ["element_id"]
             }
+          },
+          {
+            name: "long_press_element_id",
+            description: "Directly hold down/long-press on a candidate item/file by its ID (#0, #1, #2...) to select, delete, or trigger context menus (0.0px error).",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                element_id: { type: "INTEGER", description: "The numeric ID of the element to hold" }
+              },
+              required: ["element_id"]
+            }
+          },
+          {
+            name: "replace_text",
+            description: "Erase existing text in the active editable field/contact and replace it cleanly with new text (zero appending errors).",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                text: { type: "STRING", description: "The new text to replace the existing content with" }
+              },
+              required: ["text"]
+            }
+          },
+          {
+            name: "clear_text",
+            description: "Completely clear/delete all existing text in the active editable input field.",
+            parameters: { type: "OBJECT", properties: {} }
           },
           {
             name: "get_device_info",
@@ -1140,7 +1175,6 @@ CORE PROTOCOL:
 
       let result = "Action completed";
       try {
-        // Silent Real-Time Web Search Grounding (Zero Browser Popups)
         if (name === "search_internet") {
           const key = apiKeyInput.value.trim();
           try {
@@ -1178,6 +1212,12 @@ CORE PROTOCOL:
           result = "Android native bridge not ready.";
         } else if (name === "tap_element_id") {
           result = window.AndroidBridge.tapElementId(args.element_id !== undefined ? args.element_id : 0);
+        } else if (name === "long_press_element_id") {
+          result = window.AndroidBridge.longPressElementId(args.element_id !== undefined ? args.element_id : 0);
+        } else if (name === "replace_text") {
+          result = window.AndroidBridge.replaceText(args.text || "");
+        } else if (name === "clear_text") {
+          result = window.AndroidBridge.clearText();
         } else if (name === "save_app_rule") {
           const pkg = (args.app_package || "").trim();
           if (pkg) {
