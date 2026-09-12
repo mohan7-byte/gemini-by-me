@@ -59,7 +59,7 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <string name="app_name">Voice</string>
-              <string name="accessibility_desc">Enables Volume Down double-click trigger, candidate ID automation, text replacement, and autonomous device controls.</string>
+              <string name="accessibility_desc">Enables Volume Down double-click trigger, dynamic pill window, and autonomous device controls.</string>
           </resources>
           EOF
 
@@ -116,8 +116,8 @@ jobs:
                   applicationId "com.gemini.live"
                   minSdk 24
                   targetSdk 34
-                  versionCode 15
-                  versionName "2.2"
+                  versionCode 16
+                  versionName "2.3"
               }
               buildTypes {
                   release {
@@ -162,6 +162,7 @@ jobs:
                       android:showWhenLocked="true"
                       android:turnScreenOn="true"
                       android:launchMode="singleInstance"
+                      android:excludeFromRecents="true"
                       android:configChanges="orientation|screenSize|keyboardHidden">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -194,7 +195,7 @@ jobs:
           </manifest>
           EOF
 
-          # ScreenCaptureService.java: 1:1 Crisp 288x592 Capture + Instant VirtualDisplay Release
+          # ScreenCaptureService.java: 1:1 Crisp Capture + Clean Lifecycle Shutdown
           cat << 'EOF' > app/src/main/java/com/gemini/live/ScreenCaptureService.java
           package com.gemini.live;
 
@@ -344,6 +345,7 @@ jobs:
               public void onDestroy() {
                   instance = null;
                   if (mediaProjection != null) mediaProjection.stop();
+                  stopForeground(true);
                   super.onDestroy();
               }
 
@@ -352,7 +354,7 @@ jobs:
           }
           EOF
 
-          # VolumeTriggerService.java: Candidate Grounding, Auto-Feedback Loop, Samsung Text Replace & Long-Press
+          # VolumeTriggerService.java: Zero Self-Reading Filter, Candidate Grounding, Auto-Feedback Loop & Samsung Long-Press
           cat << 'EOF' > app/src/main/java/com/gemini/live/VolumeTriggerService.java
           package com.gemini.live;
 
@@ -377,6 +379,7 @@ jobs:
           import android.view.WindowManager;
           import android.view.accessibility.AccessibilityEvent;
           import android.view.accessibility.AccessibilityNodeInfo;
+          import android.view.accessibility.AccessibilityWindowInfo;
           import android.widget.Toast;
           import java.util.ArrayList;
           import java.util.List;
@@ -387,7 +390,6 @@ jobs:
               private static final long DOUBLE_PRESS_INTERVAL = 450;
               private Handler mainHandler = new Handler(Looper.getMainLooper());
 
-              // Cached hardware bounds and nodes for candidate element IDs (#0, #1, #2...)
               public List<Rect> activeCandidateBounds = new ArrayList<>();
               public List<AccessibilityNodeInfo> activeCandidateNodes = new ArrayList<>();
 
@@ -488,7 +490,32 @@ jobs:
                   startActivity(intent);
               }
 
-              // Auto-Observation: Tap Element by Candidate ID with auto-feedback diff
+              // Zero Self-Reading Filter: Ignores Voice's own window & SystemUI to read the real app underneath
+              private AccessibilityNodeInfo getRealAppRoot() {
+                  AccessibilityNodeInfo root = getRootInActiveWindow();
+                  if (root != null) {
+                      CharSequence pkg = root.getPackageName();
+                      if (pkg != null && !getPackageName().equals(pkg.toString()) && !"com.android.systemui".equals(pkg.toString())) {
+                          return root;
+                      }
+                  }
+                  List<AccessibilityWindowInfo> windows = getWindows();
+                  if (windows != null) {
+                      for (AccessibilityWindowInfo w : windows) {
+                          if (w.getType() == AccessibilityWindowInfo.TYPE_APPLICATION) {
+                              AccessibilityNodeInfo r = w.getRoot();
+                              if (r != null) {
+                                  CharSequence p = r.getPackageName();
+                                  if (p != null && !getPackageName().equals(p.toString()) && !"com.android.systemui".equals(p.toString())) {
+                                      return r;
+                                  }
+                              }
+                          }
+                      }
+                  }
+                  return root;
+              }
+
               public String executeTapElementId(int id) {
                   if (id < 0 || id >= activeCandidateBounds.size()) {
                       return "Invalid element ID #" + id + ".\n\n" + readScreenText();
@@ -498,11 +525,10 @@ jobs:
                   if (r != null && r.width() > 0 && r.height() > 0) {
                       ok = tapCoordinates(r.centerX(), r.centerY());
                   }
-                  SystemClock.sleep(250); // Settle time
+                  SystemClock.sleep(250);
                   return (ok ? "Tapped element #" + id + " successfully." : "Action failed.") + "\n\n" + readScreenText();
               }
 
-              // Candidate Long-Press (ACTION_LONG_CLICK with 750ms gesture fallback)
               public String executeLongPressElementId(int id) {
                   if (id < 0 || id >= activeCandidateBounds.size()) {
                       return "Invalid element ID #" + id + ".\n\n" + readScreenText();
@@ -522,7 +548,6 @@ jobs:
                   return (ok ? "Long-pressed element #" + id + " successfully." : "Action failed.") + "\n\n" + readScreenText();
               }
 
-              // Option A: Pure Raw Pinpoint Tap (Zero magnetic snap hijacking)
               public boolean tapCoordinates(int x, int y) {
                   if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false;
 
@@ -557,7 +582,6 @@ jobs:
                   }, null);
               }
 
-              // Samsung-Tuned Long-Press (ViewConfiguration timeout * 1.5 ~ 750ms)
               public boolean longPress(int x, int y) {
                   if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false;
 
@@ -616,9 +640,8 @@ jobs:
                   }
               }
 
-              // Returns candidate list with numbered IDs + Screen Signature Hash
               public String readScreenText() {
-                  AccessibilityNodeInfo root = getRootInActiveWindow();
+                  AccessibilityNodeInfo root = getRealAppRoot();
                   if (root == null) return "No active window detected.";
 
                   WindowManager wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
@@ -664,7 +687,7 @@ jobs:
                           CharSequence text = node.getText();
                           CharSequence desc = node.getContentDescription();
                           String label = text != null ? text.toString().trim() : (desc != null ? desc.toString().trim() : "");
-                          if (label.isEmpty()) label = node.getViewIdResourceName() != null ? node.getViewIdResourceName() : "Button";
+                          if (label.isEmpty()) label = node.getViewIdResourceName() != null ? node.getViewIdResourceName() : "Target";
 
                           list.add("[#" + id + "] [" + type + "] \"" + label + "\" at coordinates (" + normX + ", " + normY + ")");
                       }
@@ -690,9 +713,8 @@ jobs:
                   }
               }
 
-              // Multi-Stage Text Replacement Engine (SELECT_ALL -> CUT -> PASTE + KB Dismiss)
               public String replaceText(String newText) {
-                  AccessibilityNodeInfo root = getRootInActiveWindow();
+                  AccessibilityNodeInfo root = getRealAppRoot();
                   if (root == null) return "No active window.\n\n" + readScreenText();
 
                   AccessibilityNodeInfo target = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
@@ -701,12 +723,10 @@ jobs:
 
                   if (target == null) return "No editable field found.\n\n" + readScreenText();
 
-                  // Strategy 1: Direct SET_TEXT
                   Bundle args = new Bundle();
                   args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newText);
                   boolean ok = target.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
 
-                  // Strategy 2: Focus -> SELECT_ALL -> CUT -> PASTE
                   if (!ok) {
                       target.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
                       SystemClock.sleep(50);
@@ -730,7 +750,6 @@ jobs:
                       ok = target.performAction(AccessibilityNodeInfo.ACTION_PASTE);
                   }
 
-                  // Strategy 3: Samsung Keyboard Dismiss Fallback
                   if (!ok) {
                       performGlobalAction(GLOBAL_ACTION_BACK);
                       SystemClock.sleep(120);
@@ -747,7 +766,7 @@ jobs:
               }
 
               public boolean typeText(String text) {
-                  AccessibilityNodeInfo root = getRootInActiveWindow();
+                  AccessibilityNodeInfo root = getRealAppRoot();
                   if (root == null) return false;
 
                   AccessibilityNodeInfo focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
@@ -758,7 +777,7 @@ jobs:
                   performGlobalAction(GLOBAL_ACTION_BACK);
                   SystemClock.sleep(80);
 
-                  root = getRootInActiveWindow();
+                  root = getRealAppRoot();
                   if (root == null) return false;
 
                   AccessibilityNodeInfo editable = findFirstEditable(root, 0);
@@ -769,7 +788,7 @@ jobs:
                           tapCoordinates(rect.centerX(), rect.centerY());
                           SystemClock.sleep(200);
                       }
-                      root = getRootInActiveWindow();
+                      root = getRealAppRoot();
                       if (root != null) {
                           AccessibilityNodeInfo nowFocused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
                           if (nowFocused != null) return pasteDirectly(nowFocused, text);
@@ -814,7 +833,7 @@ jobs:
 
               public boolean tapElement(String label) {
                   String target = label.toLowerCase().trim();
-                  AccessibilityNodeInfo root = getRootInActiveWindow();
+                  AccessibilityNodeInfo root = getRealAppRoot();
                   if (root == null) return false;
 
                   List<AccessibilityNodeInfo> matches = new ArrayList<>();
@@ -864,7 +883,7 @@ jobs:
           }
           EOF
 
-          # MainActivity.java: Playbook File Persistence, My Files Intent & Full Device Bridge
+          # MainActivity.java: Dynamic 75dp Pill Dock, Window Sizing, My Files Integration & Device Bridge
           cat << 'EOF' > app/src/main/java/com/gemini/live/MainActivity.java
           package com.gemini.live;
 
@@ -890,8 +909,12 @@ jobs:
           import android.os.StrictMode;
           import android.provider.ContactsContract;
           import android.telephony.SmsManager;
+          import android.util.DisplayMetrics;
+          import android.view.Gravity;
           import android.view.KeyEvent;
           import android.view.View;
+          import android.view.ViewGroup;
+          import android.view.Window;
           import android.view.WindowManager;
           import android.webkit.JavascriptInterface;
           import android.webkit.PermissionRequest;
@@ -926,6 +949,9 @@ jobs:
                   }
 
                   getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+                  // Start by default as a compact bottom pill dock (75dp)
+                  shrinkWindow();
 
                   String[] perms = {
                       Manifest.permission.RECORD_AUDIO,
@@ -964,6 +990,24 @@ jobs:
 
                       @JavascriptInterface
                       public void closeApp() { runOnUiThread(() -> finish()); }
+
+                      @JavascriptInterface
+                      public void expandWindow() { MainActivity.this.expandWindow(); }
+
+                      @JavascriptInterface
+                      public void shrinkWindow() { MainActivity.this.shrinkWindow(); }
+
+                      @JavascriptInterface
+                      public void stopScreenCapture() {
+                          runOnUiThread(() -> {
+                              try {
+                                  stopService(new Intent(MainActivity.this, ScreenCaptureService.class));
+                                  if (ScreenCaptureService.instance != null) {
+                                      ScreenCaptureService.instance.stopSelf();
+                                  }
+                              } catch (Exception ignored) {}
+                          });
+                      }
 
                       @JavascriptInterface
                       public void showTaskProgress(int step, String action) {
@@ -1010,7 +1054,7 @@ jobs:
                               writer.write(jsonString);
                               writer.flush();
                               writer.close();
-                              runOnUiThread(() -> Toast.makeText(MainActivity.this, "Rules synced to Documents/Voice/rules.json", Toast.LENGTH_SHORT).show());
+                              runOnUiThread(() -> Toast.makeText(MainActivity.this, "Rules saved to Documents/Voice/rules.json", Toast.LENGTH_SHORT).show());
                               return true;
                           } catch (Exception e) {
                               return false;
@@ -1293,6 +1337,34 @@ jobs:
                   webView.loadUrl("file:///android_asset/index.html");
               }
 
+              // Shrinks the window down to only 75dp at the bottom so upper 85% is untouched
+              public void shrinkWindow() {
+                  runOnUiThread(() -> {
+                      try {
+                          DisplayMetrics dm = getResources().getDisplayMetrics();
+                          int heightPx = Math.round(75 * dm.density);
+                          Window window = getWindow();
+                          window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, heightPx);
+                          WindowManager.LayoutParams params = window.getAttributes();
+                          params.gravity = Gravity.BOTTOM;
+                          window.setAttributes(params);
+                      } catch (Exception ignored) {}
+                  });
+              }
+
+              // Expands window to fullscreen when editing settings or opening modals
+              public void expandWindow() {
+                  runOnUiThread(() -> {
+                      try {
+                          Window window = getWindow();
+                          window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
+                          WindowManager.LayoutParams params = window.getAttributes();
+                          params.gravity = Gravity.FILL;
+                          window.setAttributes(params);
+                      } catch (Exception ignored) {}
+                  });
+              }
+
               public void requestScreenCapture() {
                   if (ScreenCaptureService.instance != null) return;
                   if (projectionManager != null) {
@@ -1330,6 +1402,10 @@ jobs:
               @Override
               protected void onDestroy() {
                   instance = null;
+                  if (isFinishing() && webView != null) {
+                      webView.destroy();
+                      webView = null;
+                  }
                   super.onDestroy();
               }
 
@@ -1376,8 +1452,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v2.2 --yes || true
-          git tag -d v2.2 || true
-          gh release create v2.2 app/build/outputs/apk/debug/app-debug.apk \
-            --title "Voice v2.2 (SOTA Agent ReAct Engine)" \
-            --notes "Voice v2.2: Candidate Long-Press, Samsung Keyboard-Dismiss Text Replacement/Clearing, Auto-Feedback Diff Loop, and Silent Real-Time Web Search." || true
+          gh release delete v2.3 --yes || true
+          git tag -d v2.3 || true
+          gh release create v2.3 app/build/outputs/apk/debug/app-debug.apk \
+            --title "Voice v2.3 (Dynamic Pill Dock, Zero Self-Reading & Anti-Zombie Session)" \
+            --notes "Voice v2.3: 75dp Dynamic Bottom Dock Window, Zero Self-Reading Screen Filter, Anti-Zombie Session Exclude-Recents, and Auto-Stop Screen Capture." || true
