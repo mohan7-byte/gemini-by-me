@@ -1,627 +1,264 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Voice</title>
-  <style>
-    :root {
-      --pill-bg: rgba(13, 16, 26, 0.94);
-      --pill-border: rgba(255, 255, 255, 0.14);
-      --sheet-bg: rgba(18, 20, 32, 0.98);
-      --text: #f8fafc;
-      --text-dim: #94a3b8;
-      --danger: #ef4444;
-      --purple: #c084fc;
-      --amber: #fbbf24;
-      --cyan: #06b6d4;
-    }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Voice — Nightshade</title>
+<style>
+:root{
+  --case:#161719; --case2:#1e1f22; --line:#2f3034; --line-soft:#242528;
+  --ink:#f1efe9; --dim:#8d8e8f; --faint:#57585a;
+  --putty:#c9b79c; --sage:#93a888; --dust:#8ba3b8; --clay:#c08a6e; --moss:#7f9179; --stone:#6f7175;
+  --sans: -apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Helvetica,Arial,sans-serif;
+  --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent !important;color:var(--ink);font-family:var(--sans)}
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-      user-select: none;
-    }
+/* ===== Camera Viewfinder Mini-Float ===== */
+.cam-box{
+  position:fixed;bottom:calc(74px + env(safe-area-inset-bottom, 8px));left:50%;transform:translateX(-50%);
+  width:130px;height:95px;border-radius:10px;overflow:hidden;border:1px solid var(--line);
+  background:#000;box-shadow:0 16px 36px rgba(0,0,0,.7);z-index:9;
+}
+.cam-box video{width:100%;height:100%;object-fit:cover}
+.cam-flip{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:4px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);color:#fff;display:grid;place-items:center;font-size:11px;cursor:pointer}
 
-    html, body {
-      background: transparent !important;
-      height: 100%;
-      width: 100%;
-      overflow: hidden;
-    }
+/* ===== Floating Dock Bar: Anchored clean at bottom ===== */
+.dock{
+  position:fixed;left:0;right:0;bottom:0;
+  display:flex;justify-content:center;align-items:flex-end;
+  padding:0 10px calc(8px + env(safe-area-inset-bottom, 6px));
+  z-index:10;pointer-events:none;
+}
+.bar{
+  pointer-events:auto;width:100%;max-width:640px;
+  display:flex;align-items:center;gap:10px;padding:8px 10px;
+  background:var(--case2);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 12px 32px rgba(0,0,0,.65);
+}
 
-    .touch-backdrop {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      background: transparent;
-    }
+.swatch{width:36px;height:36px;flex:none;border-radius:6px;background:var(--stone);position:relative;transition:background .35s ease}
+.swatch.state-listening{background:var(--sage)}
+.swatch.state-working{background:var(--dust);animation:swatchPulse 1.2s infinite alternate}
+.swatch.state-speaking{background:var(--clay)}
+.swatch::after{content:"";position:absolute;inset:0;border-radius:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
 
-    .dock-container {
-      position: fixed;
-      bottom: calc(env(safe-area-inset-bottom, 16px) + 20px);
-      left: 0;
-      right: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
-      z-index: 10;
-      pointer-events: none;
-    }
+@keyframes swatchPulse {
+  0%{transform:scale(0.95);opacity:.8}
+  100%{transform:scale(1.04);opacity:1}
+}
 
-    .camera-float {
-      pointer-events: auto;
-      width: 140px;
-      height: 105px;
-      border-radius: 20px;
-      overflow: hidden;
-      border: 1.5px solid rgba(255, 255, 255, 0.25);
-      background: #000;
-      margin-bottom: 12px;
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75);
-      position: relative;
-      animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
+.copy{flex:1;min-width:0}
+.title{font-size:13.5px;font-weight:650;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:11px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-    @keyframes popIn {
-      from { transform: scale(0.8) translateY(10px); opacity: 0; }
-      to { transform: scale(1) translateY(0); opacity: 1; }
-    }
+.actions{display:flex;align-items:center;gap:6px;flex:none}
 
-    .camera-float video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+/* On / Off Slab Switch */
+.flip{
+  position:relative;width:68px;height:34px;flex:none;border-radius:6px;
+  background:#101112;border:1px solid var(--line);cursor:pointer;overflow:hidden;
+}
+.flip .half{position:absolute;top:0;bottom:0;width:50%;display:grid;place-items:center;font-size:10.5px;font-weight:600;color:var(--dim);z-index:1}
+.flip .half.a{left:0}.flip .half.b{right:0}
+.flip .slab{position:absolute;top:2px;bottom:2px;left:2px;width:calc(50% - 4px);border-radius:4px;background:var(--case);border:1px solid var(--line);transition:transform .24s cubic-bezier(.4,0,.2,1), background .24s}
+.flip.on .slab{transform:translateX(100%);background:var(--sage);border-color:var(--sage)}
+.flip.on .half.b{color:#131a10}
 
-    .cam-flip-btn {
-      position: absolute;
-      top: 6px;
-      right: 6px;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, 0.65);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      cursor: pointer;
-    }
+/* Industrial Utility Buttons */
+.tool-btn{
+  width:34px;height:34px;flex:none;border-radius:6px;background:#101112;border:1px solid var(--line);
+  display:grid;place-items:center;cursor:pointer;color:var(--dim);transition:all .2s;
+}
+.tool-btn svg{width:15px;height:15px}
+.tool-btn:active{background:#0c0d0e}
+.tool-btn.active{background:rgba(147,168,136,.2);border-color:var(--sage);color:var(--sage)}
+.tool-btn.muted{background:rgba(192,138,110,.2);border-color:var(--clay);color:var(--clay)}
 
-    .capsule {
-      pointer-events: auto;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 8px 14px 8px 10px;
-      background: var(--pill-bg);
-      border: 1px solid var(--pill-border);
-      border-radius: 999px;
-      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(36px);
-      -webkit-backdrop-filter: blur(36px);
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-      max-width: 92vw;
-      position: relative;
-      overflow: hidden;
-    }
+/* ===== Multi-Tab Settings Panel ===== */
+.overlay{position:fixed;inset:0;background:rgba(5,6,8,.65);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
+.overlay.show{opacity:1;pointer-events:auto}
 
-    .task-progress-bar {
-      position: absolute;
-      bottom: 0;
-      left: 16px;
-      right: 16px;
-      height: 2.5px;
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 99px;
-      overflow: hidden;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
+.panel{
+  position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:760px;
+  height:min(88vh,680px);transform:translateY(102%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  background:var(--case);border:1px solid var(--line);border-radius:16px 16px 0 0;
+  box-shadow:0 -20px 60px rgba(0,0,0,.7);z-index:25;display:flex;overflow:hidden;
+}
+.panel.show{transform:translateY(0)}
 
-    .task-progress-inner {
-      height: 100%;
-      width: 100%;
-      background: linear-gradient(90deg, transparent, #06b6d4, #a855f7, transparent);
-      transform: translateX(-100%);
-    }
+.side{width:130px;flex:none;border-right:1px solid var(--line);padding:18px 10px;display:flex;flex-direction:column;gap:3px;overflow-y:auto}
+.entry{display:flex;align-items:center;gap:8px;padding:8px 8px;border-radius:6px;cursor:pointer;color:var(--dim)}
+.entry .sw{width:12px;height:12px;border-radius:3px;flex:none}
+.entry span{font-size:11.5px;font-weight:500}
+.entry.active{background:var(--case2);color:var(--ink)}
 
-    .state-working .task-progress-bar { opacity: 1; }
-    .state-working .task-progress-inner {
-      animation: taskShimmer 1.3s infinite linear;
-    }
+.content{flex:1;min-width:0;overflow-y:auto;padding:20px 22px 36px}
+.phead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.phead h1{font-size:16px;margin:0;font-weight:700}
+.phead p{font-size:11.5px;color:var(--dim);margin:4px 0 0}
+.close-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--line);background:var(--case2);color:var(--dim);cursor:pointer;display:grid;place-items:center}
 
-    @keyframes taskShimmer {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
+.pane{display:none}.pane.active{display:block}
 
-    .orb-slot {
-      position: relative;
-      width: 42px;
-      height: 42px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
+.field-label{font-size:11px;color:var(--faint);margin:0 0 6px;text-transform:uppercase;letter-spacing:.04em}
+input[type=text],input[type=password],select,textarea{font:12.5px var(--sans);color:var(--ink);background:#0f1011;border:1px solid var(--line);border-radius:6px;padding:9px 10px;width:100%;outline:none;user-select:text}
+input[type=password],input[type=text]{font-family:var(--mono);font-size:12px}
+textarea{font-family:var(--mono);font-size:11px;line-height:1.45;min-height:140px;resize:vertical;color:#38bdf8}
 
-    .orb-glow {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      filter: blur(12px);
-      opacity: 0.5;
-      transition: all 0.4s ease;
-    }
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:540px){.row2{grid-template-columns:1fr}.side{width:105px}.entry span{font-size:10.5px}}
 
-    .orb-core {
-      position: relative;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      box-shadow: inset 0 2px 6px rgba(255,255,255,0.5);
-      transition: all 0.4s ease;
-      animation: coreFloat 3.5s ease-in-out infinite alternate;
-    }
+.item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0}
+.item+.item{border-top:1px solid var(--line-soft)}
+.li-name{font-size:13px;font-weight:600}
+.li-desc{font-size:11px;color:var(--dim);margin-top:2px}
 
-    @keyframes coreFloat {
-      0% { transform: scale(0.96); }
-      100% { transform: scale(1.04); }
-    }
+.toggle{position:relative;width:38px;height:20px;flex:none;cursor:pointer}
+.toggle input{display:none}
+.ttrack{position:absolute;inset:0;border-radius:4px;background:#0d0e0f;border:1px solid var(--line)}
+.tthumb{position:absolute;width:12px;height:12px;left:3px;top:3px;border-radius:2px;background:var(--faint);transition:transform .2s,background .2s}
+input:checked + .ttrack{border-color:var(--sage)}
+input:checked + .ttrack + .tthumb{transform:translateX(18px);background:var(--sage)}
 
-    .state-idle .orb-glow { background: rgba(99, 102, 241, 0.35); }
-    .state-idle .orb-core { background: radial-gradient(circle at 35% 35%, #a5b4fc 0%, #4338ca 100%); }
+.shortcut{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;cursor:pointer}
+.sc-l{display:flex;align-items:center;gap:12px;min-width:0}
+.sc-sw{width:32px;height:32px;border-radius:6px;background:var(--clay);flex:none;display:grid;place-items:center;color:#1d1108}
+.sc-sw svg{width:14px;height:14px}
 
-    .state-listening .orb-glow {
-      background: rgba(168, 85, 247, 0.9);
-      opacity: 0.9;
-      transform: scale(1.25);
-    }
-    .state-listening .orb-core {
-      background: radial-gradient(circle at 35% 35%, #f3e8ff 0%, #a855f7 100%);
-      box-shadow: 0 0 14px rgba(168, 85, 247, 0.8), inset 0 2px 6px #fff;
-    }
+.buttons{display:flex;gap:8px;margin-top:10px}
+.btn{flex:1;border-radius:6px;padding:9px;border:1px solid var(--line);background:var(--case2);color:var(--ink);font:11.5px var(--sans);font-weight:600;cursor:pointer}
+.btn.primary{background:var(--sage);border-color:var(--sage);color:#131a10}
 
-    .state-working .orb-glow {
-      background: rgba(6, 182, 212, 0.95);
-      opacity: 0.95;
-      transform: scale(1.35);
-      animation: workingPulse 1.2s ease-in-out infinite alternate;
-    }
-    .state-working .orb-core {
-      background: radial-gradient(circle at 35% 35%, #cffafe 0%, #06b6d4 50%, #0e7490 100%);
-      box-shadow: 0 0 18px rgba(6, 182, 212, 0.9), inset 0 2px 6px #fff;
-    }
-
-    @keyframes workingPulse {
-      0% { transform: scale(1.15); opacity: 0.75; }
-      100% { transform: scale(1.4); opacity: 1; }
-    }
-
-    .state-speaking .orb-glow {
-      background: rgba(251, 191, 36, 0.95);
-      opacity: 0.95;
-      transform: scale(1.35);
-    }
-    .state-speaking .orb-core {
-      background: radial-gradient(circle at 35% 35%, #fffbeb 0%, #f59e0b 50%, #e11d48 100%);
-      box-shadow: 0 0 18px rgba(251, 191, 36, 0.85), inset 0 2px 6px #fff;
-    }
-
-    .capsule-text {
-      display: flex;
-      flex-direction: column;
-      min-width: 90px;
-      max-width: 170px;
-    }
-
-    .capsule-status {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: -0.01em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .capsule-sub {
-      font-size: 0.68rem;
-      color: var(--text-dim);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      transition: color 0.2s ease;
-    }
-
-    .state-working .capsule-sub { color: #67e8f9; font-weight: 500; }
-
-    .action-group {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-
-    .icon-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      flex-shrink: 0;
-    }
-
-    .icon-btn:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.18); }
-    .icon-btn.active { background: rgba(168, 85, 247, 0.35); border-color: rgba(168, 85, 247, 0.7); color: #e9d5ff; }
-    .icon-btn.muted { background: rgba(239, 68, 68, 0.25); color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); }
-
-    .btn-end { background: rgba(239, 68, 68, 0.88); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); }
-    .btn-end:active { background: var(--danger); }
-
-    .btn-start {
-      background: linear-gradient(135deg, #4338ca, #2563eb);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      padding: 0 16px;
-      height: 36px;
-      border-radius: 999px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-    }
-
-    /* Settings Sheet */
-    .sheet {
-      pointer-events: auto;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--sheet-bg);
-      border-top: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 28px 28px 0 0;
-      backdrop-filter: blur(40px);
-      -webkit-backdrop-filter: blur(40px);
-      padding: 16px 20px calc(env(safe-area-inset-bottom, 16px) + 18px) 20px;
-      transform: translateY(102%);
-      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-      z-index: 30;
-      max-height: 88vh;
-      overflow-y: auto;
-      color: var(--text);
-    }
-
-    .sheet.open { transform: translateY(0); }
-    .sheet-handle { width: 38px; height: 4px; background: rgba(255, 255, 255, 0.25); border-radius: 99px; margin: 0 auto 14px auto; }
-    .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .sheet-title { font-size: 0.95rem; font-weight: 600; }
-
-    .field { margin-bottom: 12px; }
-    .field label { display: block; font-size: 0.72rem; color: var(--text-dim); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .field input, .field select, .field textarea {
-      width: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
-      padding: 10px 12px;
-      color: #fff;
-      font-size: 0.85rem;
-      outline: none;
-      user-select: text;
-    }
-
-    .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
-    .toggle-label { font-size: 0.82rem; font-weight: 500; }
-    .toggle-desc { font-size: 0.7rem; color: var(--text-dim); margin-top: 2px; }
-
-    .switch { position: relative; display: inline-block; width: 42px; height: 23px; flex-shrink: 0; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; inset: 0; background-color: #23293d; border-radius: 24px; transition: .3s; }
-    .slider:before { position: absolute; content: ""; height: 17px; width: 17px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .3s; }
-    input:checked + .slider { background-color: #7c3aed; }
-    input:checked + .slider:before { transform: translateX(19px); }
-
-    .action-card-btn {
-      width: 100%;
-      background: rgba(168, 85, 247, 0.12);
-      border: 1px solid rgba(168, 85, 247, 0.35);
-      color: #e9d5ff;
-      border-radius: 14px;
-      padding: 12px 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 10px 0 14px 0;
-      cursor: pointer;
-      text-align: left;
-    }
-    .action-card-btn:active { background: rgba(168, 85, 247, 0.22); }
-
-    /* Clean Full-Width Playbook Memory Section */
-    .memory-section {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 14px;
-      margin-top: 14px;
-      margin-bottom: 14px;
-    }
-
-    .memory-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-
-    #rulesEditor {
-      width: 100%;
-      background: rgba(0, 0, 0, 0.65);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 12px;
-      color: #38bdf8;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.72rem;
-      padding: 10px;
-      line-height: 1.4;
-      outline: none;
-      resize: vertical;
-      white-space: pre;
-    }
-
-    .btn-sm {
-      background: rgba(168, 85, 247, 0.25);
-      border: 1px solid rgba(168, 85, 247, 0.6);
-      color: #fff;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 0.74rem;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-    .btn-sm:active { transform: scale(0.95); background: rgba(168, 85, 247, 0.4); }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    /* Fullscreen Playbook Modal */
-    .fullscreen-modal {
-      position: fixed;
-      inset: 0;
-      background: #0b0d17;
-      z-index: 100;
-      display: flex;
-      flex-direction: column;
-      padding: 16px;
-    }
-
-    .modal-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .modal-title {
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #fff;
-    }
-
-    .modal-actions {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-
-    #modalRulesTextarea {
-      flex: 1;
-      width: 100%;
-      background: #05060a;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 14px;
-      color: #38bdf8;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.76rem;
-      padding: 12px;
-      line-height: 1.45;
-      outline: none;
-      resize: none;
-      white-space: pre;
-    }
-
-    .hidden { display: none !important; }
-  </style>
+.hidden{display:none !important}
+</style>
 </head>
 <body class="state-idle">
 
-  <div class="touch-backdrop" id="dismissBackdrop"></div>
+  <!-- Camera Viewfinder -->
+  <div class="cam-box hidden" id="cameraBox">
+    <video id="cameraVideo" autoplay playsinline muted></video>
+    <button class="cam-flip" id="flipCameraBtn">⇄</button>
+  </div>
 
-  <div class="dock-container">
-    <div class="camera-float hidden" id="cameraBox">
-      <video id="cameraVideo" autoplay playsinline muted></video>
-      <button class="cam-flip-btn" id="flipCameraBtn">⇄</button>
-    </div>
-
-    <div class="capsule" id="capsule">
-      <div class="orb-slot">
-        <div class="orb-glow"></div>
-        <div class="orb-core"></div>
+  <!-- Dock Container: True bottom anchored bar -->
+  <div class="dock">
+    <div class="bar" id="dockBar">
+      <div class="swatch" id="swatch"></div>
+      
+      <div class="copy">
+        <div class="title">Voice</div>
+        <div class="sub" id="subText">Idle</div>
       </div>
 
-      <div class="capsule-text">
-        <div class="capsule-status" id="capsuleStatus">Voice</div>
-        <div class="capsule-sub" id="capsuleSub">Ready</div>
-      </div>
-
-      <div class="action-group">
-        <button class="btn-start" id="connectBtn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-          Start
-        </button>
-
-        <div class="action-group hidden" id="liveControls">
-          <button class="icon-btn" id="toggleCameraBtn" title="Camera Vision">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+      <div class="actions">
+        <!-- Live Call Buttons (Camera / Mute) -->
+        <div class="actions hidden" id="liveControls">
+          <button class="tool-btn" id="toggleCameraBtn" title="Camera Vision">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
           </button>
-          <button class="icon-btn" id="muteBtn" title="Mute Mic">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-          </button>
-          <button class="icon-btn btn-end" id="disconnectBtn" title="End Call">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path><line x1="23" y1="1" x2="1" y2="23"></line></svg>
+          <button class="tool-btn" id="muteBtn" title="Mute Mic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/></svg>
           </button>
         </div>
 
-        <button class="icon-btn" id="openSettingsBtn" title="Settings">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        </button>
-      </div>
+        <!-- On / Off Toggle Slab -->
+        <div class="flip" id="flipBtn">
+          <div class="half a">Off</div>
+          <div class="half b">On</div>
+          <div class="slab"></div>
+        </div>
 
-      <div class="task-progress-bar">
-        <div class="task-progress-inner"></div>
+        <!-- Settings Gear -->
+        <div class="tool-btn" id="gearBtn" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Settings Sheet (Hidden when closed so Android Accessibility never reads it) -->
-  <div class="sheet hidden" id="settingsSheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-head">
-      <div class="sheet-title">Configuration & Knowledge</div>
-      <button class="icon-btn" id="closeSettingsBtn" style="border:none;">✕</button>
-    </div>
+  <!-- Background Overlay -->
+  <div class="overlay hidden" id="overlay"></div>
 
-    <div class="action-card-btn" id="openAccessibilitySettingsBtn">
-      <div>
-        <div style="font-weight: 600; font-size: 0.85rem;">⚡ Double-Click Volume Setup</div>
-        <div style="font-size: 0.72rem; opacity: 0.8; margin-top: 2px;">Tap to open Accessibility & turn on Voice trigger</div>
+  <!-- Settings Panel (Hidden from accessibility when closed) -->
+  <div class="panel hidden" id="panel">
+    <div class="side" id="side">
+      <div class="entry active" data-pane="access"><div class="sw" style="background:var(--clay)"></div><span>Quick setup</span></div>
+      <div class="entry" data-pane="memory"><div class="sw" style="background:var(--putty)"></div><span>Memory</span></div>
+      <div class="entry" data-pane="engine"><div class="sw" style="background:var(--dust)"></div><span>Voice engine</span></div>
+      <div class="entry" data-pane="auto"><div class="sw" style="background:var(--sage)"></div><span>Automation</span></div>
+      <div class="entry" data-pane="audio"><div class="sw" style="background:var(--moss)"></div><span>Audio</span></div>
+      <div class="entry" data-pane="instr"><div class="sw" style="background:var(--stone)"></div><span>Instructions</span></div>
+    </div>
+    
+    <div class="content">
+      <div class="phead">
+        <div><h1>Settings</h1><p>Real-time autonomous Android assistant parameters.</p></div>
+        <button class="close-btn" id="closeBtn">✕</button>
       </div>
-      <span style="font-size: 1.2rem;">➔</span>
-    </div>
 
-    <!-- App Playbook & Memory Editor -->
-    <div class="memory-section">
-      <div class="memory-header">
-        <div>
-          <div style="font-weight: 600; font-size: 0.82rem;">🧠 App Playbooks & Memory</div>
-          <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 2px;">Exact coordinates & self-learned app rules</div>
+      <!-- Quick Setup -->
+      <div class="pane active" data-pane="access">
+        <div class="shortcut" id="openAccessibilityBtn">
+          <div class="sc-l">
+            <div class="sc-sw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></div>
+            <div><div class="li-name">Double-click volume trigger</div><div class="li-desc">Opens Accessibility and arms the background wake shortcut.</div></div>
+          </div>
+          <span style="color:var(--dim)">→</span>
         </div>
-        <button class="btn-sm" id="expandEditorBtn" style="font-size: 0.7rem;">⛶ Fullscreen</button>
       </div>
-      <textarea id="rulesEditor" rows="5" spellcheck="false"></textarea>
-      <div style="display: flex; gap: 8px; margin-top: 8px;">
-        <button class="btn-sm" id="saveRulesBtn">💾 Save</button>
-        <button class="btn-sm btn-secondary" id="openFileManagerBtn">📁 My Files</button>
+
+      <!-- Memory & Playbooks -->
+      <div class="pane" data-pane="memory">
+        <div class="field-label">App playbooks — verified coordinates & learned rules</div>
+        <textarea id="rulesEditor" spellcheck="false"></textarea>
+        <div class="buttons">
+          <button class="btn primary" id="saveRulesBtn">Save rules</button>
+          <button class="btn" id="openFileManagerBtn">Open in My Files</button>
+        </div>
       </div>
-    </div>
 
-    <div class="field">
-      <label for="apiKey">Gemini API Key</label>
-      <input type="password" id="apiKey" placeholder="AIzaSy..." />
-    </div>
-
-    <div class="toggle-row">
-      <div>
-        <div class="toggle-label">Auto-Disconnect on Silence (4s)</div>
-        <div class="toggle-desc">Automatically close after finishing action</div>
+      <!-- Voice Engine -->
+      <div class="pane" data-pane="engine">
+        <div class="field-label">Gemini API Key</div>
+        <input type="password" id="apiKey" placeholder="AIzaSy...">
+        <div class="row2" style="margin-top:14px">
+          <div><div class="field-label">Model</div><select id="modelSelect"><option value="models/gemini-3.1-flash-live-preview">gemini-3.1-flash-live-preview</option><option value="models/gemini-2.5-flash-native-audio-preview-12-2025">gemini-2.5-flash-native-audio-preview</option><option value="models/gemini-2.0-flash-exp">gemini-2.0-flash-exp</option></select></div>
+          <div><div class="field-label">Voice</div><select id="voiceSelect"><option value="Aoede">Aoede (Expressive)</option><option value="Puck">Puck (Natural)</option><option value="Charon">Charon (Deep)</option><option value="Fenrir">Fenrir (Calm)</option><option value="Kore">Kore (Smooth)</option></select></div>
+        </div>
       </div>
-      <label class="switch">
-        <input type="checkbox" id="autoDisconnectToggle" checked />
-        <span class="slider"></span>
-      </label>
-    </div>
 
-    <div class="toggle-row">
-      <div>
-        <div class="toggle-label">Auto-Connect on Launch</div>
-        <div class="toggle-desc">Listen immediately when triggered</div>
+      <!-- Automation -->
+      <div class="pane" data-pane="auto">
+        <div class="item">
+          <div><div class="li-name">Auto-disconnect on silence (4s)</div><div class="li-desc">Closes the session after 4 seconds of quiet.</div></div>
+          <label class="toggle"><input type="checkbox" id="autoDisconnectToggle" checked><span class="ttrack"></span><span class="tthumb"></span></label>
+        </div>
+        <div class="item">
+          <div><div class="li-name">Auto-connect on launch</div><div class="li-desc">Starts listening the instant Voice wakes up.</div></div>
+          <label class="toggle"><input type="checkbox" id="autoConnectToggle" checked><span class="ttrack"></span><span class="tthumb"></span></label>
+        </div>
       </div>
-      <label class="switch">
-        <input type="checkbox" id="autoConnectToggle" checked />
-        <span class="slider"></span>
-      </label>
-    </div>
 
-    <div class="toggle-row">
-      <div>
-        <div class="toggle-label">Speaker Echo Guard</div>
-        <div class="toggle-desc">Prevents speaker acoustic feedback loop</div>
+      <!-- Audio -->
+      <div class="pane" data-pane="audio">
+        <div class="item">
+          <div><div class="li-name">Speaker echo guard</div><div class="li-desc">Prevents acoustic feedback loops from phone speakers.</div></div>
+          <label class="toggle"><input type="checkbox" id="echoGuardToggle" checked><span class="ttrack"></span><span class="tthumb"></span></label>
+        </div>
+        <div class="item">
+          <div><div class="li-name">Bluetooth priority</div><div class="li-desc">Keeps audio routing on the preferred media route.</div></div>
+          <label class="toggle"><input type="checkbox" id="btPriorityToggle" checked><span class="ttrack"></span><span class="tthumb"></span></label>
+        </div>
       </div>
-      <label class="switch">
-        <input type="checkbox" id="echoGuardToggle" checked />
-        <span class="slider"></span>
-      </label>
-    </div>
 
-    <div class="toggle-row">
-      <div>
-        <div class="toggle-label">Bluetooth Priority Mode</div>
-        <div class="toggle-desc">Keep audio on media speaker</div>
-      </div>
-      <label class="switch">
-        <input type="checkbox" id="btPriorityToggle" checked />
-        <span class="slider"></span>
-      </label>
-    </div>
-
-    <div class="field" style="margin-top: 14px;">
-      <label for="systemPrompt">Assistant Instructions (Jarvis Protocol)</label>
-      <textarea id="systemPrompt" rows="3" placeholder="Leave empty for Jarvis default..."></textarea>
-    </div>
-
-    <div class="field">
-      <label for="modelSelect">Target Model</label>
-      <select id="modelSelect">
-        <option value="models/gemini-3.1-flash-live-preview">gemini-3.1-flash-live-preview</option>
-        <option value="models/gemini-2.5-flash-native-audio-preview-12-2025">gemini-2.5-flash-native-audio-preview</option>
-        <option value="models/gemini-2.0-flash-exp">gemini-2.0-flash-exp</option>
-      </select>
-    </div>
-
-    <div class="field">
-      <label for="voiceSelect">Voice Profile</label>
-      <select id="voiceSelect">
-        <option value="Aoede">Aoede (Expressive)</option>
-        <option value="Puck">Puck (Natural)</option>
-        <option value="Charon">Charon (Deep)</option>
-        <option value="Fenrir">Fenrir (Calm)</option>
-        <option value="Kore">Kore (Smooth)</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- Fullscreen Playbook Editor Modal -->
-  <div class="fullscreen-modal hidden" id="fullscreenEditorModal">
-    <div class="modal-head">
-      <div class="modal-title">🧠 Playbook Editor</div>
-      <div class="modal-actions">
-        <button class="btn-sm" id="formatRulesBtn">Format</button>
-        <button class="btn-sm" id="saveModalRulesBtn">💾 Save</button>
-        <button class="icon-btn" id="closeModalRulesBtn" style="border:none;">✕</button>
+      <!-- Instructions -->
+      <div class="pane" data-pane="instr">
+        <div class="field-label">Assistant instructions (Jarvis Protocol)</div>
+        <textarea id="systemPrompt" style="min-height:160px"></textarea>
       </div>
     </div>
-    <textarea id="modalRulesTextarea" spellcheck="false"></textarea>
   </div>
 
   <canvas id="offscreenCanvas" class="hidden" width="320" height="240"></canvas>
@@ -711,99 +348,65 @@ CORE OPERATING DIRECTIVES:
     const rulesEditor = document.getElementById("rulesEditor");
     const saveRulesBtn = document.getElementById("saveRulesBtn");
     const openFileManagerBtn = document.getElementById("openFileManagerBtn");
-    const expandEditorBtn = document.getElementById("expandEditorBtn");
 
-    const fullscreenEditorModal = document.getElementById("fullscreenEditorModal");
-    const modalRulesTextarea = document.getElementById("modalRulesTextarea");
-    const saveModalRulesBtn = document.getElementById("saveModalRulesBtn");
-    const formatRulesBtn = document.getElementById("formatRulesBtn");
-    const closeModalRulesBtn = document.getElementById("closeModalRulesBtn");
-
-    const connectBtn = document.getElementById("connectBtn");
-    const disconnectBtn = document.getElementById("disconnectBtn");
+    const flipBtn = document.getElementById("flipBtn");
+    const swatch = document.getElementById("swatch");
+    const subText = document.getElementById("subText");
+    const liveControls = document.getElementById("liveControls");
     const muteBtn = document.getElementById("muteBtn");
     const toggleCameraBtn = document.getElementById("toggleCameraBtn");
     const flipCameraBtn = document.getElementById("flipCameraBtn");
-    const liveControls = document.getElementById("liveControls");
-    const dismissBackdrop = document.getElementById("dismissBackdrop");
 
-    const capsuleStatus = document.getElementById("capsuleStatus");
-    const capsuleSub = document.getElementById("capsuleSub");
-    const settingsSheet = document.getElementById("settingsSheet");
+    const overlay = document.getElementById("overlay");
+    const panel = document.getElementById("panel");
+    const gearBtn = document.getElementById("gearBtn");
+    const closeBtn = document.getElementById("closeBtn");
+    const openAccessibilityBtn = document.getElementById("openAccessibilityBtn");
 
-    // Open & Close Settings (with dynamic Window Sizing and DOM accessibility hide)
-    function openSettings() {
+    // Dynamic Window Sizing & Settings Panel Display
+    function openPanel() {
       if (window.AndroidBridge && window.AndroidBridge.expandWindow) {
         window.AndroidBridge.expandWindow();
       }
-      settingsSheet.classList.remove("hidden");
-      setTimeout(() => settingsSheet.classList.add("open"), 20);
+      overlay.classList.remove("hidden");
+      panel.classList.remove("hidden");
+      setTimeout(() => {
+        overlay.classList.add("show");
+        panel.classList.add("show");
+      }, 20);
     }
 
-    function closeSettings() {
-      settingsSheet.classList.remove("open");
+    function closePanel() {
+      overlay.classList.remove("show");
+      panel.classList.remove("show");
       setTimeout(() => {
-        settingsSheet.classList.add("hidden");
+        overlay.classList.add("hidden");
+        panel.classList.add("hidden");
         if (window.AndroidBridge && window.AndroidBridge.shrinkWindow) {
           window.AndroidBridge.shrinkWindow();
         }
-      }, 350);
+      }, 300);
     }
 
-    document.getElementById("openSettingsBtn").onclick = openSettings;
-    document.getElementById("closeSettingsBtn").onclick = closeSettings;
+    gearBtn.onclick = openPanel;
+    closeBtn.onclick = closePanel;
+    overlay.onclick = closePanel;
 
-    document.getElementById("openAccessibilitySettingsBtn").onclick = () => {
+    openAccessibilityBtn.onclick = () => {
       if (window.AndroidBridge && window.AndroidBridge.openAccessibilitySettings) {
         window.AndroidBridge.openAccessibilitySettings();
       }
     };
 
-    dismissBackdrop.onclick = () => {
-      if (!settingsSheet.classList.contains("hidden") && settingsSheet.classList.contains("open")) {
-        closeSettings();
-        return;
-      }
-      if (window.AndroidBridge && window.AndroidBridge.minimize) {
-        window.AndroidBridge.minimize();
-      }
-    };
-
-    // Fullscreen Playbook Editor Handlers
-    expandEditorBtn.onclick = () => {
-      modalRulesTextarea.value = rulesEditor.value;
-      fullscreenEditorModal.classList.remove("hidden");
-    };
-
-    closeModalRulesBtn.onclick = () => {
-      rulesEditor.value = modalRulesTextarea.value;
-      fullscreenEditorModal.classList.add("hidden");
-    };
-
-    formatRulesBtn.onclick = () => {
-      try {
-        const parsed = JSON.parse(modalRulesTextarea.value);
-        modalRulesTextarea.value = JSON.stringify(parsed, null, 2);
-      } catch(e) {
-        alert("JSON Syntax Error: " + e.message);
-      }
-    };
-
-    saveModalRulesBtn.onclick = () => {
-      try {
-        const parsed = JSON.parse(modalRulesTextarea.value);
-        activePlaybooks = parsed;
-        rulesEditor.value = JSON.stringify(activePlaybooks, null, 2);
-        localStorage.setItem("jarvis_app_rules", JSON.stringify(activePlaybooks, null, 2));
-        if (window.AndroidBridge && window.AndroidBridge.saveRulesToFile) {
-          window.AndroidBridge.saveRulesToFile(JSON.stringify(activePlaybooks, null, 2));
-        }
-        alert("Playbook saved successfully!");
-        fullscreenEditorModal.classList.add("hidden");
-      } catch(e) {
-        alert("JSON Syntax Error: " + e.message);
-      }
-    };
+    // Sidebar tab switcher
+    document.querySelectorAll('.entry').forEach(e => {
+      e.addEventListener('click', () => {
+        document.querySelectorAll('.entry').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+        e.classList.add('active');
+        document.querySelector('.pane[data-pane="' + e.dataset.pane + '"]').classList.add('active');
+      });
+    });
 
     // Load Local Rules & Settings
     try {
@@ -837,9 +440,9 @@ CORE OPERATING DIRECTIVES:
         if (window.AndroidBridge && window.AndroidBridge.saveRulesToFile) {
           window.AndroidBridge.saveRulesToFile(JSON.stringify(activePlaybooks, null, 2));
         }
-        alert("Rules saved successfully!");
+        alert("Playbook saved!");
       } catch(err) {
-        alert("Invalid JSON: " + err.message);
+        alert("JSON Syntax Error: " + err.message);
       }
     };
 
@@ -860,10 +463,10 @@ CORE OPERATING DIRECTIVES:
     echoGuardToggle.onchange = () => localStorage.setItem("gemini_live_echo_guard", echoGuardToggle.checked);
     btPriorityToggle.onchange = () => localStorage.setItem("gemini_live_bt_priority", btPriorityToggle.checked);
 
-    function setVisualState(state, status, sub) {
+    function setVisualState(state, statusText) {
       document.body.className = `state-${state}`;
-      capsuleStatus.innerText = status;
-      capsuleSub.innerText = sub;
+      swatch.className = `swatch state-${state}`;
+      subText.innerText = statusText;
     }
 
     function getActionDescription(name, args) {
@@ -876,7 +479,7 @@ CORE OPERATING DIRECTIVES:
           return `Replacing text: "${preview}"`;
         }
         case "clear_text": return `Clearing text field...`;
-        case "get_device_info": return `Checking time & status...`;
+        case "get_device_info": return `Checking status...`;
         case "save_app_rule": return `Learning app rule...`;
         case "create_note": return `Creating note...`;
         case "open_application": return `Opening ${args.app_name || 'app'}...`;
@@ -905,14 +508,14 @@ CORE OPERATING DIRECTIVES:
       }
     }
 
-    // Precise Silence & Auto-Disconnect Countdown Engine
+    // Precise Silence & Auto-Disconnect Countdown
     function resetInactivityTimer() {
       if (countdownInterval) {
         clearInterval(countdownInterval);
         countdownInterval = null;
       }
       if (ws && ws.readyState === WebSocket.OPEN && !isModelSpeaking) {
-        capsuleSub.innerText = "Go ahead";
+        subText.innerText = "Go ahead";
       }
     }
 
@@ -921,12 +524,12 @@ CORE OPERATING DIRECTIVES:
       if (!autoDisconnectToggle.checked || !ws || ws.readyState !== WebSocket.OPEN) return;
 
       countdownSeconds = 4;
-      capsuleSub.innerText = `Closing in ${countdownSeconds}s...`;
+      subText.innerText = `Closing in ${countdownSeconds}s...`;
 
       countdownInterval = setInterval(() => {
         countdownSeconds--;
         if (countdownSeconds > 0) {
-          capsuleSub.innerText = `Closing in ${countdownSeconds}s...`;
+          subText.innerText = `Closing in ${countdownSeconds}s...`;
         } else {
           clearInterval(countdownInterval);
           countdownInterval = null;
@@ -1232,16 +835,25 @@ CORE OPERATING DIRECTIVES:
       }
     ];
 
-    connectBtn.addEventListener("click", async () => {
+    // On / Off Slab Switch Logic
+    flipBtn.addEventListener("click", () => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        startSession();
+      } else {
+        cleanUpSession();
+      }
+    });
+
+    async function startSession() {
       const key = apiKeyInput.value.trim();
       if (!key) {
-        openSettings();
+        openPanel();
         return;
       }
       try { localStorage.setItem("gemini_live_key", key); } catch(e) {}
 
       resetInactivityTimer();
-      setVisualState("idle", "Connecting...", "Initializing");
+      setVisualState("idle", "Connecting...");
 
       const useBtPriority = btPriorityToggle.checked;
       const audioConstraints = useBtPriority
@@ -1251,7 +863,7 @@ CORE OPERATING DIRECTIVES:
       try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       } catch (err) {
-        setVisualState("idle", "Mic Blocked", "Access Denied");
+        setVisualState("idle", "Mic Blocked");
         return;
       }
 
@@ -1293,9 +905,9 @@ CORE OPERATING DIRECTIVES:
         ws.send(JSON.stringify(setupPayload));
         startMicCapture();
 
-        connectBtn.classList.add("hidden");
+        flipBtn.classList.add("on");
         liveControls.classList.remove("hidden");
-        setVisualState("listening", "Listening", "Go ahead");
+        setVisualState("listening", "Go ahead");
       };
 
       ws.onmessage = async (evt) => {
@@ -1308,14 +920,14 @@ CORE OPERATING DIRECTIVES:
       };
 
       ws.onclose = () => cleanUpSession();
-    });
+    }
 
     async function executeLocalTool(name, args, id) {
       resetInactivityTimer();
       autonomousStepCount++;
 
       const actionDesc = getActionDescription(name, args);
-      setVisualState("working", `Working • Step ${autonomousStepCount}`, actionDesc);
+      setVisualState("working", actionDesc);
 
       if (window.AndroidBridge && window.AndroidBridge.showTaskProgress) {
         window.AndroidBridge.showTaskProgress(autonomousStepCount, actionDesc);
@@ -1563,7 +1175,6 @@ CORE OPERATING DIRECTIVES:
         for (let i = 0; i < channel.length; i++) sum += channel[i] * channel[i];
         const rms = Math.sqrt(sum / channel.length);
 
-        // Calibrated speech threshold (0.045): filters out room/fan noise so countdown isn't cancelled
         if (rms > 0.045) {
           resetInactivityTimer();
           autonomousStepCount = 0;
@@ -1597,7 +1208,7 @@ CORE OPERATING DIRECTIVES:
       if (msg.serverContent.interrupted) {
         stopAudioPlayback();
         isModelSpeaking = false;
-        setVisualState("listening", "Listening", "Go ahead");
+        setVisualState("listening", "Go ahead");
         resetInactivityTimer();
         return;
       }
@@ -1626,7 +1237,7 @@ CORE OPERATING DIRECTIVES:
     }
 
     function playPCM(base64Audio) {
-      setVisualState("speaking", "Speaking", "Jarvis...");
+      setVisualState("speaking", "Jarvis...");
 
       if (audioCtx && audioCtx.state === "suspended") {
         audioCtx.resume();
@@ -1668,7 +1279,7 @@ CORE OPERATING DIRECTIVES:
         isModelSpeaking = false;
         echoCooldownTimer = null;
         if (ws && ws.readyState === WebSocket.OPEN) {
-          setVisualState("listening", "Listening", "Go ahead");
+          setVisualState("listening", "Go ahead");
           startInactivityCountdown();
         }
       }, 350);
@@ -1720,15 +1331,6 @@ CORE OPERATING DIRECTIVES:
       muteBtn.classList.toggle("muted", isMuted);
     });
 
-    disconnectBtn.addEventListener("click", () => {
-      resetInactivityTimer();
-      if (ws) ws.close();
-      cleanUpSession();
-      if (window.AndroidBridge && window.AndroidBridge.closeApp) {
-        window.AndroidBridge.closeApp();
-      }
-    });
-
     function cleanUpSession() {
       resetInactivityTimer();
       stopAudioPlayback();
@@ -1747,11 +1349,10 @@ CORE OPERATING DIRECTIVES:
       }
       isMuted = false;
       muteBtn.classList.remove("muted");
-      connectBtn.classList.remove("hidden");
+      flipBtn.classList.remove("on");
       liveControls.classList.add("hidden");
-      setVisualState("idle", "Voice", "Ready");
+      setVisualState("idle", "Idle");
 
-      // Stop screen capture service & restore pill window
       if (window.AndroidBridge) {
         if (window.AndroidBridge.stopScreenCapture) window.AndroidBridge.stopScreenCapture();
         if (window.AndroidBridge.shrinkWindow) window.AndroidBridge.shrinkWindow();
@@ -1760,13 +1361,13 @@ CORE OPERATING DIRECTIVES:
 
     window.autoConnectOnWake = function() {
       if (autoConnectToggle.checked && apiKeyInput.value.trim() && (!ws || ws.readyState !== WebSocket.OPEN)) {
-        connectBtn.click();
+        startSession();
       }
     };
 
     window.addEventListener("DOMContentLoaded", () => {
       if (autoConnectToggle.checked && apiKeyInput.value.trim()) {
-        setTimeout(() => connectBtn.click(), 250);
+        setTimeout(() => startSession(), 250);
       }
     });
   </script>
