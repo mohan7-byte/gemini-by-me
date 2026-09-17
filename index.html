@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
-<title>Voice — Nightshade Beast</title>
+<title>Voice — Stabilized</title>
 <style>
 :root{
   --case:#141517; --case2:#1c1d20; --line:#2c2d31; --line-soft:#222326;
@@ -24,7 +24,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 .cam-box video{width:100%;height:100%;object-fit:cover}
 .cam-flip{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:6px;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.3);color:#fff;display:grid;place-items:center;font-size:12px;cursor:pointer}
 
-/* ===== Floating Dock Bar (Supports Bottom, Middle, and Top) ===== */
+/* ===== Floating Dock Bar ===== */
 .dock{
   position:fixed;left:0;right:0;z-index:10;pointer-events:none;
   display:flex;justify-content:center;transition:all .3s cubic-bezier(.4,0,.2,1);
@@ -77,7 +77,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 .flip.on .slab{transform:translateX(100%);background:var(--sage);border-color:var(--sage)}
 .flip.on .half.b{color:#11180e}
 
-/* Industrial Utility Buttons (Scaled to 40px for easy tapping) */
+/* Industrial Utility Buttons */
 .tool-btn{
   width:40px;height:40px;flex:none;border-radius:8px;background:#0f1011;border:1.5px solid var(--line);
   display:grid;place-items:center;cursor:pointer;color:var(--dim);transition:all .2s;
@@ -87,7 +87,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 .tool-btn.active{background:rgba(155,179,144,.2);border-color:var(--sage);color:var(--sage)}
 .tool-btn.muted{background:rgba(201,147,119,.2);border-color:var(--clay);color:var(--clay)}
 
-/* ===== Multi-Tab Settings Panel ===== */
+/* ===== Settings Panel ===== */
 .overlay{position:fixed;inset:0;background:rgba(4,5,7,.7);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
 .overlay.show{opacity:1;pointer-events:auto}
 
@@ -143,14 +143,12 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
 .btn{flex:1;border-radius:8px;padding:11px;border:1.5px solid var(--line);background:var(--case2);color:var(--ink);font:13px var(--sans);font-weight:650;cursor:pointer}
 .btn.primary{background:var(--sage);border-color:var(--sage);color:#11180e}
 
-/* Playbook Memory Section */
 .memory-section{
   background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.09);border-radius:14px;padding:14px;margin-top:10px;margin-bottom:14px;
 }
 .memory-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 #rulesEditor{width:100%;background:rgba(0,0,0,.7);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#38bdf8;font-family:var(--mono);font-size:12.5px;padding:12px;line-height:1.45;outline:none;resize:vertical}
 
-/* Fullscreen Playbook Modal */
 .fullscreen-modal{position:fixed;inset:0;background:#0a0b0d;z-index:100;display:flex;flex-direction:column;padding:18px}
 .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .modal-title{font-weight:750;font-size:16px;color:#fff}
@@ -162,13 +160,11 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
 </head>
 <body class="state-idle">
 
-  <!-- Camera Viewfinder -->
   <div class="cam-box hidden" id="cameraBox">
     <video id="cameraVideo" autoplay playsinline muted></video>
     <button class="cam-flip" id="flipCameraBtn">⇄</button>
   </div>
 
-  <!-- Dock Container: Supports Bottom, Middle, and Top Positioning -->
   <div class="dock pos-bottom" id="dockContainer">
     <div class="bar" id="dockBar">
       <div class="swatch" id="swatch"></div>
@@ -179,7 +175,6 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
       </div>
 
       <div class="actions">
-        <!-- Live Call Controls (Camera / Mute) -->
         <div class="actions hidden" id="liveControls">
           <button class="tool-btn" id="toggleCameraBtn" title="Camera Vision">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
@@ -189,14 +184,12 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
           </button>
         </div>
 
-        <!-- On / Off Toggle Slab -->
         <div class="flip" id="flipBtn">
           <div class="half a">Off</div>
           <div class="half b">On</div>
           <div class="slab"></div>
         </div>
 
-        <!-- Settings Gear -->
         <div class="tool-btn" id="gearBtn" title="Settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </div>
@@ -204,10 +197,8 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
     </div>
   </div>
 
-  <!-- Background Overlay -->
   <div class="overlay hidden" id="overlay"></div>
 
-  <!-- Settings Panel -->
   <div class="panel hidden" id="panel">
     <div class="side" id="side">
       <div class="entry active" data-pane="access"><div class="sw" style="background:var(--clay)"></div><span>Setup</span></div>
@@ -225,7 +216,6 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
         <button class="close-btn" id="closeBtn">✕</button>
       </div>
 
-      <!-- Quick Setup -->
       <div class="pane active" data-pane="access">
         <div class="shortcut" id="openAccessibilityBtn">
           <div class="sc-l">
@@ -236,7 +226,6 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
         </div>
       </div>
 
-      <!-- Memory & Playbooks -->
       <div class="pane" data-pane="memory">
         <div class="memory-section">
           <div class="memory-header">
@@ -251,7 +240,6 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
         </div>
       </div>
 
-      <!-- Layout & Dock Positioning -->
       <div class="pane" data-pane="layout">
         <div class="field">
           <div class="field-label">Floating Bar Screen Position</div>
@@ -266,7 +254,6 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
         </div>
       </div>
 
-      <!-- Voice Engine -->
       <div class="pane" data-pane="engine">
         <div class="field">
           <div class="field-label">Gemini API Key</div>
@@ -278,7 +265,6 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
         </div>
       </div>
 
-      <!-- Automation -->
       <div class="pane" data-pane="auto">
         <div class="item">
           <div><div class="li-name">Auto-disconnect on silence (4s)</div><div class="li-desc">Closes session after 4s silence (locked out while working).</div></div>
@@ -290,7 +276,6 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
         </div>
       </div>
 
-      <!-- Audio -->
       <div class="pane" data-pane="audio">
         <div class="item">
           <div><div class="li-name">Speaker echo guard</div><div class="li-desc">Mutes mic while assistant speaks to stop echo loops.</div></div>
@@ -302,7 +287,6 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
         </div>
       </div>
 
-      <!-- Instructions -->
       <div class="pane" data-pane="instr">
         <div class="field-label">Assistant instructions (Jarvis Protocol)</div>
         <textarea id="systemPrompt" style="min-height:160px"></textarea>
@@ -310,7 +294,6 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
     </div>
   </div>
 
-  <!-- Fullscreen Playbook Editor Modal -->
   <div class="fullscreen-modal hidden" id="fullscreenEditorModal">
     <div class="modal-head">
       <div class="modal-title">🧠 Playbook Editor</div>
@@ -381,6 +364,9 @@ CORE OPERATING DIRECTIVES:
     let nextAudioTime = 0;
     let activeSources = [];
 
+    // STRICT MUTEX LOCK: Prevents parallel duplicate WebSocket sessions
+    let isConnecting = false;
+
     let cameraStream = null;
     let cameraInterval = null;
     let isCameraActive = false;
@@ -435,7 +421,6 @@ CORE OPERATING DIRECTIVES:
     const closeBtn = document.getElementById("closeBtn");
     const openAccessibilityBtn = document.getElementById("openAccessibilityBtn");
 
-    // Dynamic Dock Positioning (Bottom / Middle / Top)
     function applyDockPosition(pos) {
       dockContainer.className = `dock pos-${pos}`;
       localStorage.setItem("voice_dock_position", pos);
@@ -445,7 +430,6 @@ CORE OPERATING DIRECTIVES:
     }
     dockPositionSelect.onchange = () => applyDockPosition(dockPositionSelect.value);
 
-    // Dynamic Window Sizing & Settings Panel Display
     function openPanel() {
       if (window.AndroidBridge && window.AndroidBridge.expandWindow) {
         window.AndroidBridge.expandWindow();
@@ -480,7 +464,6 @@ CORE OPERATING DIRECTIVES:
       }
     };
 
-    // Sidebar tab switcher
     document.querySelectorAll('.entry').forEach(e => {
       e.addEventListener('click', () => {
         document.querySelectorAll('.entry').forEach(x => x.classList.remove('active'));
@@ -490,7 +473,6 @@ CORE OPERATING DIRECTIVES:
       });
     });
 
-    // Fullscreen Playbook Editor Handlers
     expandEditorBtn.onclick = () => {
       modalRulesTextarea.value = rulesEditor.value;
       fullscreenEditorModal.classList.remove("hidden");
@@ -526,7 +508,6 @@ CORE OPERATING DIRECTIVES:
       }
     };
 
-    // Load Local Rules, Position & Settings
     try {
       const savedPos = localStorage.getItem("voice_dock_position") || "bottom";
       dockPositionSelect.value = savedPos;
@@ -630,7 +611,6 @@ CORE OPERATING DIRECTIVES:
       }
     }
 
-    // Inactivity Countdown Guard: NEVER fires while an autonomous task or tool is executing!
     function resetInactivityTimer() {
       if (countdownInterval) {
         clearInterval(countdownInterval);
@@ -643,7 +623,6 @@ CORE OPERATING DIRECTIVES:
 
     function startInactivityCountdown() {
       resetInactivityTimer();
-      // Hard Lockout: Never close if an autonomous task or action is in progress!
       if (!autoDisconnectToggle.checked || !ws || ws.readyState !== WebSocket.OPEN) return;
       if (autonomousStepCount > 0 || isExecutingAction || isModelSpeaking || activeSources.length > 0) return;
 
@@ -651,7 +630,6 @@ CORE OPERATING DIRECTIVES:
       subText.innerText = `Closing in ${countdownSeconds}s...`;
 
       countdownInterval = setInterval(() => {
-        // Double-check task lock inside interval
         if (autonomousStepCount > 0 || isExecutingAction || isModelSpeaking || activeSources.length > 0) {
           resetInactivityTimer();
           return;
@@ -962,7 +940,6 @@ CORE OPERATING DIRECTIVES:
       }
     ];
 
-    // On / Off Slab Switch Logic
     flipBtn.addEventListener("click", () => {
       if (!ws || ws.readyState !== WebSocket.OPEN) {
         startSession();
@@ -972,8 +949,15 @@ CORE OPERATING DIRECTIVES:
     });
 
     async function startSession() {
+      // STRICT MUTEX: Prevent duplicate parallel sessions
+      if (isConnecting || (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING))) {
+        return;
+      }
+      isConnecting = true;
+
       const key = apiKeyInput.value.trim();
       if (!key) {
+        isConnecting = false;
         openPanel();
         return;
       }
@@ -990,6 +974,7 @@ CORE OPERATING DIRECTIVES:
       try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       } catch (err) {
+        isConnecting = false;
         setVisualState("idle", "Mic Blocked");
         return;
       }
@@ -1006,10 +991,12 @@ CORE OPERATING DIRECTIVES:
       try {
         ws = new WebSocket(endpoint);
       } catch (e) {
+        isConnecting = false;
         return;
       }
 
       ws.onopen = () => {
+        isConnecting = false;
         const now = new Date();
         const liveContext = `\n\nLIVE DEVICE TELEMETRY:\n- Exact Local Time: ${now.toLocaleTimeString()}\n- Current Date: ${now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n- Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\nAnswer all questions about current time, weekday, and date immediately from this telemetry without calling any tool.`;
         
@@ -1039,16 +1026,22 @@ CORE OPERATING DIRECTIVES:
         setVisualState("listening", "Go ahead");
       };
 
-      ws.onmessage = async (evt) => {
+      ws.onmessage = (evt) => {
         let raw = evt.data;
-        if (raw instanceof Blob) raw = await raw.text();
-        try {
-          const res = JSON.parse(raw);
-          handleServerTurn(res);
-        } catch(e) {}
+        if (raw instanceof Blob) {
+          raw.text().then(t => {
+            try { handleServerTurn(JSON.parse(t)); } catch(e){}
+          });
+        } else {
+          try { handleServerTurn(JSON.parse(raw)); } catch(e){}
+        }
       };
 
-      ws.onclose = () => cleanUpSession();
+      ws.onerror = () => { isConnecting = false; };
+      ws.onclose = () => {
+        isConnecting = false;
+        cleanUpSession();
+      };
     }
 
     async function executeLocalTool(name, args, id) {
@@ -1072,12 +1065,11 @@ CORE OPERATING DIRECTIVES:
 
       let result = "Action completed";
       try {
-        // Multi-Tier Dual-Engine Real-Time Web Search (Zero Browser Popups)
         if (name === "search_internet") {
           const key = apiKeyInput.value.trim();
           let answered = false;
 
-          // Tier 1: Gemini 2.0 Flash Search Grounding
+          // Tier 1: Gemini 2.0 Flash Grounding
           try {
             const searchEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
             const searchRes = await fetch(searchEndpoint, {
@@ -1111,7 +1103,7 @@ CORE OPERATING DIRECTIVES:
             } catch(e) {}
           }
 
-          // Tier 3: Direct Knowledge Answer Fallback
+          // Tier 3: Direct Knowledge Fallback
           if (!answered) {
             try {
               const fallbackEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
@@ -1281,7 +1273,6 @@ CORE OPERATING DIRECTIVES:
       }
     });
 
-    // Expand window so camera preview is never clipped
     async function startCameraVision() {
       try {
         if (window.AndroidBridge && window.AndroidBridge.expandForCamera) {
@@ -1356,7 +1347,6 @@ CORE OPERATING DIRECTIVES:
         for (let i = 0; i < channel.length; i++) sum += channel[i] * channel[i];
         const rms = Math.sqrt(sum / channel.length);
 
-        // Calibrated threshold to 0.048 to ignore fan and ambient room noise floor
         if (rms > 0.048) {
           resetInactivityTimer();
           autonomousStepCount = 0;
@@ -1420,13 +1410,14 @@ CORE OPERATING DIRECTIVES:
       if (msg.serverContent.turnComplete) scheduleTurnEnd();
     }
 
-    // Audio Timing Clamp & Await Resume (Eliminates silent "Speaking" bug)
-    async function playPCM(base64Audio) {
-      setVisualState("speaking", "Speaking");
-
-      if (audioCtx && audioCtx.state === "suspended") {
-        try { await audioCtx.resume(); } catch(e){}
+    // SYNCHRONOUS, DETERMINISTIC AUDIO QUEUE (Zero overlapping chunks, zero pitch/voice corruption)
+    function playPCM(base64Audio) {
+      if (!audioCtx || audioCtx.state === 'closed') return;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
       }
+
+      setVisualState("speaking", "Speaking");
 
       const binary = atob(base64Audio);
       const len = binary.length;
@@ -1445,9 +1436,9 @@ CORE OPERATING DIRECTIVES:
       src.connect(audioCtx.destination);
 
       const now = audioCtx.currentTime;
-      // TIMING CLAMP: Prevent future timestamp drift; snap to now + 0.02s if drift exceeds 0.35s
-      if (nextAudioTime < now || nextAudioTime > now + 0.35) {
-        nextAudioTime = now + 0.02;
+      // Strict linear scheduling: catch up if queue drifted behind real time
+      if (nextAudioTime < now) {
+        nextAudioTime = now + 0.04;
       }
       src.start(nextAudioTime);
       nextAudioTime += buffer.duration;
@@ -1474,7 +1465,12 @@ CORE OPERATING DIRECTIVES:
     }
 
     function stopAudioPlayback() {
-      activeSources.forEach(s => { try { s.stop(); } catch(e){} });
+      activeSources.forEach(s => {
+        try {
+          s.stop();
+          s.disconnect();
+        } catch(e){}
+      });
       activeSources = [];
       if (audioCtx) nextAudioTime = audioCtx.currentTime;
     }
@@ -1519,8 +1515,9 @@ CORE OPERATING DIRECTIVES:
       muteBtn.classList.toggle("muted", isMuted);
     });
 
-    // Hard-Kill & Zero-Leak Teardown
+    // Hard-Kill Teardown: Instantly terminates WebSocket & dumps all trailing audio
     function cleanUpSession() {
+      isConnecting = false;
       resetInactivityTimer();
       stopAudioPlayback();
       stopCameraVision();
@@ -1529,15 +1526,17 @@ CORE OPERATING DIRECTIVES:
       isExecutingAction = false;
       autonomousStepCount = 0;
 
-      // 1. HARD CLOSE WebSocket with code 1000
       if (ws) {
         try {
+          ws.onopen = null;
+          ws.onmessage = null;
+          ws.onerror = null;
+          ws.onclose = null;
           ws.close(1000, "Session closed");
         } catch(e) {}
         ws = null;
       }
 
-      // 2. HARD POWER-OFF Microphone Hardware
       if (micStream) {
         try {
           micStream.getTracks().forEach(t => {
@@ -1554,22 +1553,20 @@ CORE OPERATING DIRECTIVES:
         micProcessor = null;
       }
 
-      // 3. HARD CLOSE Audio Context
       if (audioCtx) {
         try {
           if (audioCtx.state !== 'closed') audioCtx.close();
         } catch(e) {}
         audioCtx = null;
       }
+      nextAudioTime = 0;
 
-      // 4. Reset UI
       isMuted = false;
       muteBtn.classList.remove("muted");
       flipBtn.classList.remove("on");
       liveControls.classList.add("hidden");
       setVisualState("idle", "Idle");
 
-      // 5. HARD KILL Background Services & Shrink Window
       if (window.AndroidBridge) {
         if (window.AndroidBridge.stopScreenCapture) window.AndroidBridge.stopScreenCapture();
         if (window.AndroidBridge.shrinkWindow) window.AndroidBridge.shrinkWindow();
@@ -1577,13 +1574,13 @@ CORE OPERATING DIRECTIVES:
     }
 
     window.autoConnectOnWake = function() {
-      if (autoConnectToggle.checked && apiKeyInput.value.trim() && (!ws || ws.readyState !== WebSocket.OPEN)) {
+      if (autoConnectToggle.checked && apiKeyInput.value.trim() && !isConnecting && (!ws || ws.readyState !== WebSocket.OPEN)) {
         startSession();
       }
     };
 
     window.addEventListener("DOMContentLoaded", () => {
-      if (autoConnectToggle.checked && apiKeyInput.value.trim()) {
+      if (autoConnectToggle.checked && apiKeyInput.value.trim() && !isConnecting && (!ws || ws.readyState !== WebSocket.OPEN)) {
         setTimeout(() => startSession(), 250);
       }
     });
