@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
-<title>Voice — Stabilized</title>
+<title>Voice — Relentless Agent</title>
 <style>
 :root{
   --case:#141517; --case2:#1c1d20; --line:#2c2d31; --line-soft:#222326;
@@ -24,7 +24,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 .cam-box video{width:100%;height:100%;object-fit:cover}
 .cam-flip{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:6px;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.3);color:#fff;display:grid;place-items:center;font-size:12px;cursor:pointer}
 
-/* ===== Floating Dock Bar ===== */
+/* ===== Floating Dock Bar (Supports Bottom, Middle, and Top) ===== */
 .dock{
   position:fixed;left:0;right:0;z-index:10;pointer-events:none;
   display:flex;justify-content:center;transition:all .3s cubic-bezier(.4,0,.2,1);
@@ -87,7 +87,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 .tool-btn.active{background:rgba(155,179,144,.2);border-color:var(--sage);color:var(--sage)}
 .tool-btn.muted{background:rgba(201,147,119,.2);border-color:var(--clay);color:var(--clay)}
 
-/* ===== Settings Panel ===== */
+/* ===== Multi-Tab Settings Panel ===== */
 .overlay{position:fixed;inset:0;background:rgba(4,5,7,.7);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
 .overlay.show{opacity:1;pointer-events:auto}
 
@@ -143,12 +143,14 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
 .btn{flex:1;border-radius:8px;padding:11px;border:1.5px solid var(--line);background:var(--case2);color:var(--ink);font:13px var(--sans);font-weight:650;cursor:pointer}
 .btn.primary{background:var(--sage);border-color:var(--sage);color:#11180e}
 
+/* Playbook Memory Section */
 .memory-section{
   background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.09);border-radius:14px;padding:14px;margin-top:10px;margin-bottom:14px;
 }
 .memory-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 #rulesEditor{width:100%;background:rgba(0,0,0,.7);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#38bdf8;font-family:var(--mono);font-size:12.5px;padding:12px;line-height:1.45;outline:none;resize:vertical}
 
+/* Fullscreen Playbook Modal */
 .fullscreen-modal{position:fixed;inset:0;background:#0a0b0d;z-index:100;display:flex;flex-direction:column;padding:18px}
 .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .modal-title{font-weight:750;font-size:16px;color:#fff}
@@ -165,6 +167,7 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
     <button class="cam-flip" id="flipCameraBtn">⇄</button>
   </div>
 
+  <!-- Dock Container -->
   <div class="dock pos-bottom" id="dockContainer">
     <div class="bar" id="dockBar">
       <div class="swatch" id="swatch"></div>
@@ -175,6 +178,7 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
       </div>
 
       <div class="actions">
+        <!-- Live Call Controls (Camera / Mute) -->
         <div class="actions hidden" id="liveControls">
           <button class="tool-btn" id="toggleCameraBtn" title="Camera Vision">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
@@ -184,12 +188,14 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
           </button>
         </div>
 
+        <!-- On / Off Toggle Slab -->
         <div class="flip" id="flipBtn">
           <div class="half a">Off</div>
           <div class="half b">On</div>
           <div class="slab"></div>
         </div>
 
+        <!-- Settings Gear -->
         <div class="tool-btn" id="gearBtn" title="Settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </div>
@@ -199,6 +205,7 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
 
   <div class="overlay hidden" id="overlay"></div>
 
+  <!-- Settings Panel -->
   <div class="panel hidden" id="panel">
     <div class="side" id="side">
       <div class="entry active" data-pane="access"><div class="sw" style="background:var(--clay)"></div><span>Setup</span></div>
@@ -267,7 +274,7 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
 
       <div class="pane" data-pane="auto">
         <div class="item">
-          <div><div class="li-name">Auto-disconnect on silence (4s)</div><div class="li-desc">Closes session after 4s silence (locked out while working).</div></div>
+          <div><div class="li-name">Auto-disconnect on silence (4s)</div><div class="li-desc">Closes session after 4s silence (strictly locked out while working).</div></div>
           <label class="toggle"><input type="checkbox" id="autoDisconnectToggle" checked><span class="ttrack"></span><span class="tthumb"></span></label>
         </div>
         <div class="item">
@@ -288,7 +295,7 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
       </div>
 
       <div class="pane" data-pane="instr">
-        <div class="field-label">Assistant instructions (Jarvis Protocol)</div>
+        <div class="field-label">Assistant instructions (Relentless Agent Protocol)</div>
         <textarea id="systemPrompt" style="min-height:160px"></textarea>
       </div>
     </div>
@@ -335,26 +342,22 @@ input:checked + .ttrack + .tthumb{transform:translateX(20px);background:var(--sa
       }
     };
 
-    const JARVIS_DEFAULT_PROMPT = `You are Voice (Jarvis), an ultra-fast autonomous Android agent with physical device control, real-time web intelligence, and experiential memory.
+    const JARVIS_DEFAULT_PROMPT = `You are Voice (Jarvis), a relentless, fully autonomous Android agent with physical device control and real-time web intelligence.
 
-CORE OPERATING DIRECTIVES:
-1. REAL-TIME WEB FACTS & NEWS (SILENT WEB SEARCH):
-   - Whenever asked for real-time facts, sports scores, exam dates, schedules, or news, ALWAYS call search_internet(query).
-   - search_internet fetches live web answers silently in the background. Speak the concise 1-2 sentence answer directly.
-   - NEVER call search_web or open Chrome unless explicitly told to "open browser".
-2. LIVE TELEMETRY:
-   - You already know the exact time and date from your system telemetry. Speak it immediately without using any tool.
-3. SPATIAL GROUNDING & CANDIDATE IDS:
+ABSOLUTE AUTONOMOUS EXECUTION RULES:
+1. NEVER DELEGATE TO THE USER: You have physical hands on this phone. NEVER say "I opened this for you, now tap it", "you can do this", or "please click here". You perform every single step to the very end yourself.
+2. DO NOT DECLARE PREMATURE COMPLETION: Merely opening an app, typing text into a box, or clicking a search link is an INTERMEDIATE step, NOT the final goal! Never say "Completed!" or "I'm done" after a single step. Keep issuing tool calls until the entire objective (e.g., file fully downloaded, note completely saved, video playing) is 100% finished.
+3. RELENTLESS ACTION CHAINING: After each tool response with the updated screen state, inspect the new targets and immediately issue the NEXT tool call without hesitation.
+4. SPATIAL ACCURACY & CANDIDATE IDS:
    - Call read_screen_text first whenever you need to interact with an app. It returns an "INTERACTIVE ELEMENTS" catalog with numbered candidate IDs [#0, #1, #2...].
    - ALWAYS prefer calling tap_element_id(element_id) when an ID exists. It has 100% pinpoint precision (0.0px error).
    - To hold/select files or items by candidate ID, ALWAYS call long_press_element_id(element_id).
-4. EDITING & TEXT REPLACEMENT:
-   - When editing existing fields, changing contact names, or deleting text, ALWAYS call replace_text(text) or clear_text().
-   - To insert text at the active cursor, call type_text(text).
-5. SELF-LEARNING PLAYBOOKS:
-   - When you discover a working button coordinate in an unfamiliar app, call save_app_rule so you remember it permanently!
-6. CADENCE:
-   - Execute actions silently in sequence. Speak a single, confident 1-sentence confirmation when finished.`;
+5. EDITING & REPLACING:
+   - To edit existing fields, change names, or delete words, use replace_text(text) or clear_text(). Do not blindly append with type_text.
+6. REAL-TIME FACTS & EXAMS:
+   - Call search_internet(query) for live scores, news, exam dates, or facts. Speak the answer directly without opening Chrome.
+7. FINAL CONCISE SPOKEN CONFIRMATION:
+   - Only speak aloud when the entire multi-step mission is 100% accomplished. Give a single, confident 1-sentence confirmation.`;
 
     let ws = null;
     let audioCtx = null;
@@ -364,7 +367,7 @@ CORE OPERATING DIRECTIVES:
     let nextAudioTime = 0;
     let activeSources = [];
 
-    // STRICT MUTEX LOCK: Prevents parallel duplicate WebSocket sessions
+    // STRICT MUTEX LOCK
     let isConnecting = false;
 
     let cameraStream = null;
@@ -621,6 +624,7 @@ CORE OPERATING DIRECTIVES:
       }
     }
 
+    // Never auto-disconnect while an autonomous chain is active!
     function startInactivityCountdown() {
       resetInactivityTimer();
       if (!autoDisconnectToggle.checked || !ws || ws.readyState !== WebSocket.OPEN) return;
@@ -949,7 +953,6 @@ CORE OPERATING DIRECTIVES:
     });
 
     async function startSession() {
-      // STRICT MUTEX: Prevent duplicate parallel sessions
       if (isConnecting || (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING))) {
         return;
       }
@@ -1050,26 +1053,26 @@ CORE OPERATING DIRECTIVES:
       autonomousStepCount++;
 
       const actionDesc = getActionDescription(name, args);
-      setVisualState("working", actionDesc);
+      setVisualState("working", `[Step ${autonomousStepCount}] ${actionDesc}`);
 
       if (window.AndroidBridge && window.AndroidBridge.showTaskProgress) {
         window.AndroidBridge.showTaskProgress(autonomousStepCount, actionDesc);
       }
 
-      if (autonomousStepCount > 10) {
-        sendToolResponse(id, "Safety limit reached. Pausing autonomous loop.");
+      // 30-step generous ceiling: Never stops mid-workflow!
+      if (autonomousStepCount > 100) {
+        sendToolResponse(id, "[SYSTEM ALERT: Extended autonomous execution limit reached (100 actions). Prompting user for verification.]");
         autonomousStepCount = 0;
         isExecutingAction = false;
         return;
       }
 
-      let result = "Action completed";
+      let result = "Step executed.";
       try {
         if (name === "search_internet") {
           const key = apiKeyInput.value.trim();
           let answered = false;
 
-          // Tier 1: Gemini 2.0 Flash Grounding
           try {
             const searchEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
             const searchRes = await fetch(searchEndpoint, {
@@ -1088,7 +1091,6 @@ CORE OPERATING DIRECTIVES:
             }
           } catch(e) {}
 
-          // Tier 2: Instant CORS Web Answer Fallback (DuckDuckGo Instant API)
           if (!answered) {
             try {
               const ddgRes = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(args.query)}&format=json&no_html=1&skip_disambig=1`);
@@ -1103,7 +1105,6 @@ CORE OPERATING DIRECTIVES:
             } catch(e) {}
           }
 
-          // Tier 3: Direct Knowledge Fallback
           if (!answered) {
             try {
               const fallbackEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
@@ -1115,9 +1116,9 @@ CORE OPERATING DIRECTIVES:
                 })
               });
               const d2 = await res2.json();
-              result = d2.candidates?.[0]?.content?.parts?.[0]?.text || "Live search completed.";
+              result = d2.candidates?.[0]?.content?.parts?.[0]?.text || "Live search information retrieved.";
             } catch(e) {
-              result = "Query processed.";
+              result = "Search query processed.";
             }
           }
         } else if (name === "get_device_info") {
@@ -1182,7 +1183,7 @@ CORE OPERATING DIRECTIVES:
         } else if (name === "wait_seconds") {
           const s = Math.min(Math.max(args.seconds || 1, 0.5), 4);
           await new Promise(r => setTimeout(r, s * 1000));
-          result = "Waited " + s + " seconds.";
+          result = "Waited " + s + " seconds for UI to update.";
         } else if (name === "read_screen_text") {
           let screenRaw = window.AndroidBridge.readScreenText();
 
@@ -1246,7 +1247,11 @@ CORE OPERATING DIRECTIVES:
       }
 
       isExecutingAction = false;
-      sendToolResponse(id, result);
+
+      // ANTI-PREMATURE COMPLETION: Forces model to keep chaining until final goal
+      const wrappedFeedback = `[STEP ${autonomousStepCount} EXECUTED. DO NOT speak to user yet unless the FINAL goal requested by user is 100% achieved. If more actions or clicks are needed, issue the NEXT tool call immediately. Never tell user to do it themselves.]\n\n${result}`;
+
+      sendToolResponse(id, wrappedFeedback);
     }
 
     function sendToolResponse(id, result) {
@@ -1347,6 +1352,7 @@ CORE OPERATING DIRECTIVES:
         for (let i = 0; i < channel.length; i++) sum += channel[i] * channel[i];
         const rms = Math.sqrt(sum / channel.length);
 
+        // Calibrated speech threshold to reset steps on real user voice
         if (rms > 0.048) {
           resetInactivityTimer();
           autonomousStepCount = 0;
@@ -1410,7 +1416,6 @@ CORE OPERATING DIRECTIVES:
       if (msg.serverContent.turnComplete) scheduleTurnEnd();
     }
 
-    // SYNCHRONOUS, DETERMINISTIC AUDIO QUEUE (Zero overlapping chunks, zero pitch/voice corruption)
     function playPCM(base64Audio) {
       if (!audioCtx || audioCtx.state === 'closed') return;
       if (audioCtx.state === 'suspended') {
@@ -1436,7 +1441,6 @@ CORE OPERATING DIRECTIVES:
       src.connect(audioCtx.destination);
 
       const now = audioCtx.currentTime;
-      // Strict linear scheduling: catch up if queue drifted behind real time
       if (nextAudioTime < now) {
         nextAudioTime = now + 0.04;
       }
@@ -1515,7 +1519,6 @@ CORE OPERATING DIRECTIVES:
       muteBtn.classList.toggle("muted", isMuted);
     });
 
-    // Hard-Kill Teardown: Instantly terminates WebSocket & dumps all trailing audio
     function cleanUpSession() {
       isConnecting = false;
       resetInactivityTimer();
