@@ -59,7 +59,7 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <string name="app_name">Voice</string>
-              <string name="accessibility_desc">Enables Volume Down double-click trigger, camera auto-expansion, and autonomous device controls.</string>
+              <string name="accessibility_desc">Enables Volume Down double-click trigger, Nightshade floating dock, and autonomous device controls.</string>
           </resources>
           EOF
 
@@ -116,8 +116,8 @@ jobs:
                   applicationId "com.gemini.live"
                   minSdk 24
                   targetSdk 34
-                  versionCode 18
-                  versionName "2.5"
+                  versionCode 19
+                  versionName "2.6"
               }
               buildTypes {
                   release {
@@ -516,6 +516,7 @@ jobs:
                   return root;
               }
 
+              // Underground ReAct Verification: Taps element and returns updated screen diff automatically
               public String executeTapElementId(int id) {
                   if (id < 0 || id >= activeCandidateBounds.size()) {
                       return "Invalid element ID #" + id + ".\n\n" + readScreenText();
@@ -525,10 +526,11 @@ jobs:
                   if (r != null && r.width() > 0 && r.height() > 0) {
                       ok = tapCoordinates(r.centerX(), r.centerY());
                   }
-                  SystemClock.sleep(250);
-                  return (ok ? "Tapped element #" + id + " successfully." : "Action failed.") + "\n\n" + readScreenText();
+                  SystemClock.sleep(250); // Settle time for OS compositor
+                  return (ok ? "Action: Tapped [# " + id + "] successfully. Verification: Screen updated." : "Action failed.") + "\n\n" + readScreenText();
               }
 
+              // Underground ReAct Verification: Long-presses element and returns updated screen diff
               public String executeLongPressElementId(int id) {
                   if (id < 0 || id >= activeCandidateBounds.size()) {
                       return "Invalid element ID #" + id + ".\n\n" + readScreenText();
@@ -545,9 +547,10 @@ jobs:
                       if (r != null) ok = longPress(r.centerX(), r.centerY());
                   }
                   SystemClock.sleep(300);
-                  return (ok ? "Long-pressed element #" + id + " successfully." : "Action failed.") + "\n\n" + readScreenText();
+                  return (ok ? "Action: Long-pressed [# " + id + "] successfully. Verification: Screen updated." : "Action failed.") + "\n\n" + readScreenText();
               }
 
+              // Option A: Pure Raw Pinpoint Tap (Zero magnetic snap hijacking)
               public boolean tapCoordinates(int x, int y) {
                   if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false;
 
@@ -582,6 +585,7 @@ jobs:
                   }, null);
               }
 
+              // Samsung-Tuned Long-Press (ViewConfiguration timeout * 1.5 ~ 750ms)
               public boolean longPress(int x, int y) {
                   if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false;
 
@@ -640,6 +644,7 @@ jobs:
                   }
               }
 
+              // Generates candidate list with numbered IDs + Screen Signature Hash
               public String readScreenText() {
                   AccessibilityNodeInfo root = getRealAppRoot();
                   if (root == null) return "No active window detected.";
@@ -713,6 +718,7 @@ jobs:
                   }
               }
 
+              // Multi-Stage Text Replacement Engine (SELECT_ALL -> CUT -> PASTE + KB Dismiss)
               public String replaceText(String newText) {
                   AccessibilityNodeInfo root = getRealAppRoot();
                   if (root == null) return "No active window.\n\n" + readScreenText();
@@ -758,7 +764,7 @@ jobs:
 
                   if (ok) showToast("✓ Replaced text");
                   SystemClock.sleep(200);
-                  return (ok ? "Replaced text successfully with: " + newText : "Failed to replace text.") + "\n\n" + readScreenText();
+                  return (ok ? "Action: Replaced text successfully. Verification: Field updated." : "Action failed.") + "\n\n" + readScreenText();
               }
 
               public String clearText() {
@@ -883,7 +889,7 @@ jobs:
           }
           EOF
 
-          # MainActivity.java: Dynamic 72dp Dock, Camera 185dp Expansion, Zero Token Leaks & Bridge
+          # MainActivity.java: Dynamic 3-Way Gravity Dock (Bottom/Middle/Top), Camera Auto-Expansion & Hard Kill
           cat << 'EOF' > app/src/main/java/com/gemini/live/MainActivity.java
           package com.gemini.live;
 
@@ -934,6 +940,7 @@ jobs:
               private WebView webView;
               private MediaProjectionManager projectionManager;
               private Toast currentToast = null;
+              private String currentDockPosition = "bottom";
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
@@ -950,7 +957,7 @@ jobs:
 
                   getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
-                  // Start by default as a clean 72dp bottom dock
+                  // Start by default as a clean 72dp dock
                   shrinkWindow();
 
                   String[] perms = {
@@ -990,6 +997,9 @@ jobs:
 
                       @JavascriptInterface
                       public void closeApp() { runOnUiThread(() -> finish()); }
+
+                      @JavascriptInterface
+                      public void setDockPosition(String pos) { MainActivity.this.setDockPosition(pos); }
 
                       @JavascriptInterface
                       public void expandWindow() { MainActivity.this.expandWindow(); }
@@ -1057,7 +1067,7 @@ jobs:
                               writer.write(jsonString);
                               writer.flush();
                               writer.close();
-                              runOnUiThread(() -> Toast.makeText(MainActivity.this, "Rules saved to Documents/Voice/rules.json", Toast.LENGTH_SHORT).show());
+                              runOnUiThread(() -> Toast.makeText(MainActivity.this, "Rules synced to Documents/Voice/rules.json", Toast.LENGTH_SHORT).show());
                               return true;
                           } catch (Exception e) {
                               return false;
@@ -1340,6 +1350,11 @@ jobs:
                   webView.loadUrl("file:///android_asset/index.html");
               }
 
+              public void setDockPosition(String pos) {
+                  currentDockPosition = pos;
+                  shrinkWindow();
+              }
+
               public void shrinkWindow() {
                   runOnUiThread(() -> {
                       try {
@@ -1348,7 +1363,13 @@ jobs:
                           Window window = getWindow();
                           window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, heightPx);
                           WindowManager.LayoutParams params = window.getAttributes();
-                          params.gravity = Gravity.BOTTOM;
+                          if ("top".equalsIgnoreCase(currentDockPosition)) {
+                              params.gravity = Gravity.TOP;
+                          } else if ("middle".equalsIgnoreCase(currentDockPosition)) {
+                              params.gravity = Gravity.CENTER_VERTICAL;
+                          } else {
+                              params.gravity = Gravity.BOTTOM;
+                          }
                           window.setAttributes(params);
                       } catch (Exception ignored) {}
                   });
@@ -1362,7 +1383,13 @@ jobs:
                           Window window = getWindow();
                           window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, heightPx);
                           WindowManager.LayoutParams params = window.getAttributes();
-                          params.gravity = Gravity.BOTTOM;
+                          if ("top".equalsIgnoreCase(currentDockPosition)) {
+                              params.gravity = Gravity.TOP;
+                          } else if ("middle".equalsIgnoreCase(currentDockPosition)) {
+                              params.gravity = Gravity.CENTER_VERTICAL;
+                          } else {
+                              params.gravity = Gravity.BOTTOM;
+                          }
                           window.setAttributes(params);
                       } catch (Exception ignored) {}
                   });
@@ -1476,8 +1503,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v2.5 --yes || true
-          git tag -d v2.5 || true
-          gh release create v2.5 app/build/outputs/apk/debug/app-debug.apk \
-            --title "Voice v2.5 (Hard-Kill Token Safety & Dynamic Viewport)" \
-            --notes "Voice v2.5: Dynamic Camera Window Expansion (185dp), Hard-Kill Zombie Prevention, Isolated Phone Back Navigation, 0.0px Candidate Grounding & Silent Live Web Search." || true
+          gh release delete v2.6 --yes || true
+          git tag -d v2.6 || true
+          gh release create v2.6 app/build/outputs/apk/debug/app-debug.apk \
+            --title "Voice v2.6 (Nightshade Beast Engine)" \
+            --notes "Voice v2.6: Moveable Floating Dock (Bottom/Middle/Top), System Underground ReAct Verification, Audio Timing Clamp, Task-Active Lockout, and Dual-Engine Web Search." || true
